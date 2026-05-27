@@ -849,63 +849,97 @@
         }
 
         @media(max-width: 768px) {
+            /* Dashboard container fills full screen on mobile */
             .dashboard-container {
-                flex-direction: column;
+                position: relative;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
             }
-            
+
+            /* Map takes full screen minus bottom nav */
+            #map {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: calc(100vh - 65px) !important;
+                z-index: 1 !important;
+            }
+
+            /* Sidebars slide in as drawers */
             .sidebar {
-                position: fixed;
+                position: fixed !important;
                 left: 0;
                 top: 0;
-                width: 85%;
-                max-width: 380px;
+                width: 88% !important;
+                max-width: 400px;
+                height: 100vh !important;
+                overflow-y: auto;
                 transform: translateX(-100%);
-                z-index: 1000;
-                padding-bottom: 80px; /* Space for bottom nav */
-                height: 100vh;
-                transition: transform 0.3s ease;
+                z-index: 1001;
+                padding-bottom: 80px;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 6px 0 30px rgba(0,0,0,0.2);
             }
 
             .social-sidebar {
-                position: fixed;
+                position: fixed !important;
                 right: 0;
                 top: 0;
-                width: 85%;
-                max-width: 380px;
+                width: 88% !important;
+                max-width: 400px;
+                height: 100vh !important;
+                overflow-y: auto;
                 transform: translateX(100%);
-                z-index: 1000;
+                z-index: 1001;
                 padding-bottom: 80px;
-                height: 100vh;
-                transition: transform 0.3s ease;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: -6px 0 30px rgba(0,0,0,0.2);
             }
 
-            .sidebar.mobile-open,
+            .sidebar.mobile-open {
+                transform: translateX(0) !important;
+            }
+
             .social-sidebar.mobile-open {
-                transform: translateX(0);
+                transform: translateX(0) !important;
             }
 
+            /* Show bottom nav on mobile */
             .bottom-nav {
                 display: flex;
-            }
-            
-            /* Make map full screen, but leave room for bottom nav */
-            #map {
-                width: 100vw;
-                height: calc(100vh - 65px) !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                z-index: 1;
+                z-index: 1002;
             }
 
-            /* Move Map zoom controls up slightly to avoid bottom nav */
+            /* Adjust Leaflet zoom controls above bottom nav */
             .leaflet-bottom.leaflet-right {
                 bottom: 75px;
             }
-            
-            /* Adjust AI Chat Widget for mobile */
+
+            /* Hide desktop camera FAB on mobile (use bottom nav instead) */
+            .camera-fab {
+                display: none !important;
+            }
+
+            /* Map mode pill position on mobile */
+            .map-mode-pill {
+                left: 16px;
+                top: 16px;
+            }
+
+            /* Live location HUD on mobile */
+            .live-location-hud {
+                left: 16px;
+                bottom: 80px;
+                max-width: calc(100vw - 32px);
+            }
+
+            /* AI Chat Widget for mobile */
             .chat-toggle-btn {
-                bottom: 80px; /* Above bottom nav */
+                right: 18px;
+                bottom: 80px;
+                z-index: 1003;
             }
 
             .chat-widget {
@@ -915,11 +949,15 @@
                 height: min(75vh, calc(100vh - 90px));
                 max-height: calc(100vh - 90px);
                 border-radius: 20px;
+                z-index: 1003;
             }
-            .chat-toggle-btn { right: 18px; bottom: 80px; }
-            .map-mode-pill { left: 16px; top: 16px; }
+
             .chat-history { min-height: 120px; }
-            .chat-quick-actions { grid-template-columns: repeat(4, minmax(92px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
+            .chat-quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+                overflow-x: visible;
+                padding-bottom: 4px;
+            }
             .chat-input-actions small { display: none; }
         }
 
@@ -1961,7 +1999,7 @@
         }
     }
 
-    // Theo dõi vị trí thực tế — GPS ưu tiên, không dùng vị trí cache cũ
+    // Theo dõi vị trí thực tế — GPS ưu tiên, bộ lọc độ chính xác thông minh
     let currentLocationMarker = null;
     let currentLocationCircle = null;
     let locationWatchId = null;
@@ -1969,11 +2007,21 @@
     let bestAccuracy = Infinity;
     let locationFixCount = 0;
     let userManuallySetLocation = false;
+    let _lastRawLat = null, _lastRawLng = null;
+    let _accuracyRetryTimer = null;
 
+    // Options chính: yêu cầu độ chính xác cao nhất
     const geoOptions = {
         enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 60000
+        maximumAge: 0,       // Không dùng cache cũ
+        timeout: 15000       // Giảm xuống 15s để retry nhanh hơn
+    };
+
+    // Options fallback: dùng khi thiết bị không có GPS tốt
+    const geoFallbackOptions = {
+        enableHighAccuracy: false,
+        maximumAge: 10000,
+        timeout: 10000
     };
 
     const liveLocationIcon = L.divIcon({
@@ -2140,9 +2188,32 @@
     }
 
     function onLocationError(error) {
+        // Nếu timeout và chưa có fix nào, thử lại với fallback options
+        if (error.code === 3 && locationFixCount === 0) {
+            console.warn('GPS timeout, thử lại với chế độ fallback...');
+            navigator.geolocation.getCurrentPosition(
+                updateCurrentPosition,
+                (fallbackErr) => {
+                    const messages = {
+                        1: 'Cho phép truy cập vị trí (biểu tượng ổ khóa trên thanh địa chỉ).',
+                        2: 'Không xác định được GPS. Bật Location Services trên thiết bị.',
+                        3: 'Không lấy được GPS — hãy ra ngoài trời và bấm nút định vị lại.'
+                    };
+                    updateLocationStatus(
+                        `<i class="bi bi-exclamation-triangle-fill me-2"></i> <small>${messages[fallbackErr.code] || 'Lỗi định vị'}</small>`,
+                        'warning'
+                    );
+                    const hudText = document.getElementById('liveLocationHudText');
+                    if (hudText) hudText.textContent = messages[fallbackErr.code] || 'Lỗi định vị';
+                },
+                geoFallbackOptions
+            );
+            return;
+        }
+
         const messages = {
             1: 'Cho phép truy cập vị trí (biểu tượng ổ khóa trên thanh địa chỉ).',
-            2: 'Không xác định được GPS. Bật Location trên thiết bị.',
+            2: 'Không xác định được GPS. Bật Location Services trên thiết bị.',
             3: 'GPS quá lâu — ra ngoài trời hoặc bấm nút định vị lại.'
         };
         updateLocationStatus(
@@ -2172,19 +2243,33 @@
         document.getElementById('liveLocationHud').style.display = 'block';
         document.getElementById('liveLocationHudText').textContent = 'Đang lấy GPS chính xác...';
 
+        // Lấy ngay 1 lần bằng getCurrentPosition (nhanh hơn watchPosition lần đầu)
         requestAccurateLocation();
 
+        // watchPosition để liên tục cập nhật
         locationWatchId = navigator.geolocation.watchPosition(
             updateCurrentPosition,
             onLocationError,
             geoOptions
         );
+
+        // Cứ 30 giây request thêm 1 lần để đảm bảo vị trí không bị stuck
+        _accuracyRetryTimer = setInterval(() => {
+            if (!userManuallySetLocation && bestAccuracy > 80) {
+                console.log('Đang thử nâng cao độ chính xác GPS...');
+                requestAccurateLocation();
+            }
+        }, 30000);
     }
 
     function stopLiveLocationTracking() {
         if (locationWatchId !== null) {
             navigator.geolocation.clearWatch(locationWatchId);
             locationWatchId = null;
+        }
+        if (_accuracyRetryTimer !== null) {
+            clearInterval(_accuracyRetryTimer);
+            _accuracyRetryTimer = null;
         }
     }
 
@@ -2214,8 +2299,25 @@
     startLiveLocationTracking();
     window.addEventListener('beforeunload', stopLiveLocationTracking);
 
-    setTimeout(() => map.invalidateSize(), 400);
-    window.addEventListener('resize', () => map.invalidateSize());
+    // Invalidate map size on load and resize to prevent gray tiles
+    setTimeout(() => { map.invalidateSize(true); }, 300);
+    setTimeout(() => { map.invalidateSize(true); }, 800);
+
+    // Debounced resize handler to fix map on DevTools toggle
+    let _resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(() => {
+            map.invalidateSize(true);
+        }, 200);
+    });
+
+    // Also invalidate when visibility changes (e.g. switching tabs)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            setTimeout(() => map.invalidateSize(true), 200);
+        }
+    });
 
     function focusMap(lat, lng, openPopup = false) {
         map.flyTo([lat, lng], 16, {
