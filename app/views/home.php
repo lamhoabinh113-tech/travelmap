@@ -2,328 +2,521 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Travel Memory Map - Lưu giữ từng hành trình</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Travel Memory Map</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/style.css">
     <style>
-        body { background: #07111f; color: #f8fafc; }
-        .nav-glass {
-            background: rgba(7, 17, 31, 0.58);
-            backdrop-filter: blur(18px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        :root {
+            --primary: #1a73e8;
+            --bg-color: #f3f4f6;
+            --surface: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --safe-area-bottom: 20px;
         }
-        .hero-section {
-            min-height: 100vh;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #e2e8f0;
             display: flex;
-            align-items: center;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* Mobile Container Simulation for Desktop */
+        .app-container {
+            width: 100%;
+            max-width: 414px; /* iPhone Max width */
+            background-color: var(--surface);
+            min-height: 100vh;
             position: relative;
-            overflow: hidden;
-            background:
-                linear-gradient(90deg, rgba(7,17,31,0.88) 0%, rgba(7,17,31,0.58) 46%, rgba(7,17,31,0.18) 100%),
-                url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85');
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 1. Map Area --- */
+        .map-section {
+            position: relative;
+            height: 280px;
+            background-image: url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80');
             background-size: cover;
             background-position: center;
         }
-        .hero-section::after {
-            content: "";
+
+        /* Profile Badge */
+        .profile-badge {
             position: absolute;
-            inset: auto 0 0;
-            height: 22vh;
-            background: linear-gradient(0deg, #07111f, rgba(7,17,31,0));
+            top: 20px;
+            left: 20px;
+            background: rgba(37, 99, 235, 0.9);
+            backdrop-filter: blur(8px);
+            padding: 6px 16px 6px 6px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .hero-content { position: relative; z-index: 2; padding-top: 88px; padding-bottom: 80px; }
-        .hero-title {
-            max-width: 780px;
-            font-size: clamp(3rem, 8vw, 6.8rem);
-            font-weight: 800;
-            line-height: 0.96;
-        }
-        .hero-copy { max-width: 620px; color: rgba(248,250,252,0.82); font-size: 1.14rem; }
-        .hero-actions .btn { border-radius: 16px; padding: 14px 22px; font-weight: 700; }
-        .floating-memory {
-            position: absolute;
-            right: clamp(22px, 8vw, 110px);
-            bottom: 8vh;
-            width: min(360px, 84vw);
-            z-index: 3;
-            background: rgba(255,255,255,0.14);
-            border: 1px solid rgba(255,255,255,0.22);
-            backdrop-filter: blur(22px);
-            border-radius: 22px;
-            padding: 16px;
-            box-shadow: 0 28px 80px rgba(0,0,0,0.28);
-        }
-        .floating-memory img { width: 100%; height: 170px; object-fit: cover; border-radius: 16px; }
-        .section-dark { background: #07111f; }
-        .section-soft { background: #f6f8fb; color: #0f172a; }
-        .feature-card {
-            height: 100%;
-            padding: 26px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
-            transition: transform .28s ease, border-color .28s ease;
-        }
-        .feature-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: rgba(34,211,238,0.55);
-            box-shadow: 0 20px 50px rgba(34,211,238,0.15);
-        }
-        .feature-card .feature-icon { transition: transform 0.35s var(--ease-spring, ease); }
-        .feature-card:hover .feature-icon { transform: scale(1.1) rotate(-4deg); }
-        .floating-memory { animation: float 5s ease-in-out infinite; }
-        .hero-badge-pulse {
-            animation: pulseGlow 2.5s ease infinite;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .timeline-row { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .timeline-row:hover {
-            transform: translateX(8px);
-            box-shadow: 0 22px 56px rgba(15,23,42,0.12);
-        }
-        .metric { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .metric:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 22px 50px rgba(99,102,241,0.12);
-        }
-        .nav-glass a:not(.btn) { transition: color 0.2s ease, opacity 0.2s ease; }
-        .nav-glass a:not(.btn):hover { opacity: 0.85; color: #22d3ee !important; }
-        .feature-icon {
-            width: 46px;
-            height: 46px;
-            display: grid;
-            place-items: center;
-            border-radius: 14px;
-            color: #07111f;
-            background: #7dd3fc;
-            margin-bottom: 18px;
-        }
-        .timeline-preview {
-            position: relative;
-            display: grid;
-            gap: 18px;
-            padding-left: 22px;
-        }
-        .timeline-preview::before {
-            content: "";
-            position: absolute;
-            left: 5px;
-            top: 12px;
-            bottom: 12px;
-            width: 2px;
-            background: linear-gradient(#22d3ee, #f43f5e);
-        }
-        .timeline-row {
-            position: relative;
-            padding: 18px;
-            border-radius: 8px;
-            background: #ffffff;
-            box-shadow: 0 18px 48px rgba(15,23,42,0.08);
-        }
-        .timeline-row::before {
-            content: "";
-            position: absolute;
-            left: -23px;
-            top: 24px;
-            width: 12px;
-            height: 12px;
+        .profile-badge img {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: #22d3ee;
-            border: 3px solid #f6f8fb;
+            object-fit: cover;
+            border: 2px solid white;
         }
-        .metric {
-            padding: 22px;
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-name { font-weight: 700; font-size: 14px; line-height: 1.2; }
+        .profile-level { font-size: 11px; opacity: 0.9; }
+
+        /* Map UI Elements */
+        .chat-map-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 42px;
+            height: 42px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 20px;
+            color: var(--text-main);
+        }
+
+        .map-marker {
+            position: absolute;
+            background: white;
+            padding: 4px;
             border-radius: 8px;
-            background: #ffffff;
-            box-shadow: 0 16px 44px rgba(15,23,42,0.07);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        @media (max-width: 991px) {
-            .floating-memory { position: relative; right: auto; bottom: auto; margin-top: 36px; }
-            .hero-section { align-items: flex-start; }
+        .map-marker img {
+            width: 50px;
+            height: 40px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+        .marker-1 { top: 80px; left: 130px; }
+        .marker-2 { top: 110px; right: 50px; }
+        .marker-3 { top: 170px; left: 60px; }
+
+        .you-are-here {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2563eb;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        .you-are-here i { font-size: 16px; }
+
+        /* --- 2. Main Content Area --- */
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            margin-top: -24px;
+            position: relative;
+            z-index: 10;
+            padding: 0 20px 100px 20px; /* padding bottom for nav bar */
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            position: relative;
+        }
+        .tab-item.active {
+            color: var(--primary);
+        }
+        .tab-item i { font-size: 20px; }
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -21px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* AI Section */
+        .ai-section {
+            background: #f8fafc;
+            border-radius: 16px;
+            margin-top: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .ai-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ai-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .user-chat {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .ai-avatar {
+            width: 32px;
+            height: 32px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .ai-response {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            color: var(--text-main);
+            line-height: 1.5;
+            text-align: center;
+        }
+        .ai-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        /* Album Section */
+        .album-section {
+            margin-top: 24px;
+        }
+        .album-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .album-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .album-link {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        
+        .album-card {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            background: white;
+        }
+        .album-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .album-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--primary);
+        }
+        .album-card-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            margin-left: 28px;
+        }
+        
+        /* Scrollable Photos */
+        .photo-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            /* Hide scrollbar */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .photo-scroll::-webkit-scrollbar { display: none; }
+        
+        .photo-item {
+            min-width: 110px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .photo-item img {
+            width: 110px;
+            height: 110px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+        .photo-caption {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        /* --- 3. Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 414px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px calc(12px + var(--safe-area-bottom));
+            z-index: 100;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: var(--text-main);
+        }
+        .nav-item i { font-size: 22px; }
+        
+        /* Center Camera Button */
+        .nav-item-camera {
+            width: 56px;
+            height: 56px;
+            background: #1e293b;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            transform: translateY(-10px);
+            box-shadow: 0 8px 16px rgba(30, 41, 59, 0.3);
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top nav-glass py-3">
-        <div class="container">
-            <a class="navbar-brand fw-bold d-flex align-items-center" href="index.php">
-                <i class="bi bi-geo-alt-fill me-2 text-info"></i>
-                <span>Travel Memory Map</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="ms-auto d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                    <a href="#features" class="text-white text-decoration-none fw-semibold">Tính năng</a>
-                    <a href="index.php?url=auth/login" class="text-white text-decoration-none fw-semibold">Đăng nhập</a>
-                    <a href="index.php?url=auth/register" class="btn btn-premium">Bắt đầu hành trình</a>
+
+<div class="app-container">
+    
+    <!-- 1. Map Section -->
+    <div class="map-section">
+        <!-- Profile Badge -->
+        <div class="profile-badge">
+            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Avatar">
+            <div class="profile-info">
+                <span class="profile-name">aa12</span>
+                <span class="profile-level">Explorer Lv.1</span>
+            </div>
+        </div>
+
+        <!-- Chat Button -->
+        <div class="chat-map-btn">
+            <i class="bi bi-chat-text"></i>
+        </div>
+
+        <!-- Map Markers -->
+        <div class="map-marker marker-1">
+            <img src="https://images.unsplash.com/photo-1555400038-63f5ba517a47?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Photo 1">
+        </div>
+        <div class="map-marker marker-2">
+            <img src="https://images.unsplash.com/photo-1506744626753-1fa44df14c28?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Photo 2">
+        </div>
+        <div class="map-marker marker-3">
+            <img src="https://images.unsplash.com/photo-1517021897933-0e0319cfbc28?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" alt="Photo 3">
+        </div>
+
+        <!-- You Are Here -->
+        <div class="you-are-here">
+            <i class="bi bi-geo-alt-fill"></i>
+            You Are Here
+        </div>
+    </div>
+
+    <!-- 2. Main Content -->
+    <div class="main-content">
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab-item active">
+                <i class="bi bi-signpost-2" style="color: #3b82f6;"></i>
+                Lịch trình
+            </div>
+            <div class="tab-item">
+                <i class="bi bi-images" style="color: #8b5cf6;"></i>
+                Ảnh
+            </div>
+            <div class="tab-item">
+                <i class="bi bi-journal-album" style="color: #f59e0b;"></i>
+                Album
+            </div>
+            <div class="tab-item">
+                <i class="bi bi-people-fill" style="color: #3b82f6;"></i>
+                Bạn Bè
+            </div>
+        </div>
+
+        <!-- AI Chat Section -->
+        <div class="ai-section">
+            <div class="ai-header">
+                <i class="bi bi-robot"></i>
+                Travel Memory AI
+            </div>
+            <div class="ai-body">
+                <div class="user-chat">
+                    <div class="ai-avatar">Ai</div>
+                    <span>Quán ăn ngon gần đây có gì ngon vậy?</span>
+                </div>
+                
+                <div class="ai-response">
+                    Gợi ý đây! Hãy thử bún chả Hương Liên —<br>một quán ngon nổi tiếng gần đây!
+                    <button class="ai-btn">Đề xuất địa điểm</button>
                 </div>
             </div>
         </div>
-    </nav>
 
-    <header class="hero-section">
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-orb hero-orb-3"></div>
-        <div class="container hero-content">
-            <div class="row align-items-end">
-                <div class="col-lg-8">
-                    <span class="badge rounded-pill text-bg-light px-3 py-2 mb-4 hero-badge-pulse reveal revealed">Travel journal + map + AI companion</span>
-                    <h1 class="hero-title mb-4 reveal reveal-delay-1 revealed">Lưu giữ từng <span class="text-gradient">hành trình</span>, từng khoảnh khắc.</h1>
-                    <p class="hero-copy mb-5 reveal reveal-delay-2 revealed">Đánh dấu nơi bạn đã đi qua, gom ảnh thành album, xem lại cảm xúc theo thời gian và biến mỗi chuyến đi thành một câu chuyện đáng nhớ.</p>
-                    <div class="hero-actions d-flex flex-column flex-sm-row gap-3 reveal reveal-delay-3 revealed">
-                        <a href="index.php?url=auth/register" class="btn btn-premium btn-lg"><i class="bi bi-compass-fill me-2"></i>Bắt đầu hành trình</a>
-                        <a href="index.php?url=auth/login" class="btn btn-outline-light btn-lg"><i class="bi bi-map-fill me-2"></i>Khám phá bản đồ</a>
-                    </div>
-                </div>
-                <div class="floating-memory reveal reveal-delay-2 revealed">
-                    <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80" alt="Travel memory preview">
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div>
-                            <div class="fw-bold">Hành trình biển xanh</div>
-                            <small class="text-white-50">21/05/2026 · Bình yên · 12 ảnh</small>
+        <!-- Album Section -->
+        <div class="album-section">
+            <div class="album-header">
+                <div class="album-title">Album Hành Trình Của Bạn</div>
+                <a href="#" class="album-link">Xem thêm</a>
+            </div>
+
+            <div class="album-card">
+                <div class="album-card-header">
+                    <div>
+                        <div class="album-card-title">
+                            <i class="bi bi-folder-fill"></i>
+                            Chuyến Đi Tam Đảo 🌟
                         </div>
-                        <i class="bi bi-play-circle-fill fs-2 text-info"></i>
+                        <div class="album-card-date">22/05/2026 - 24/05/2026</div>
+                    </div>
+                    <i class="bi bi-three-dots" style="color: var(--text-muted);"></i>
+                </div>
+
+                <div class="photo-scroll">
+                    <div class="photo-item">
+                        <img src="https://images.unsplash.com/photo-1596711677353-9184df46399e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Tam Đảo">
+                        <div class="photo-caption">Tam Đảo</div>
+                    </div>
+                    <div class="photo-item">
+                        <img src="https://images.unsplash.com/photo-1621251919597-2a543599a80e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Đèo đá mây">
+                        <div class="photo-caption">Đèo đá mây</div>
+                    </div>
+                    <div class="photo-item">
+                        <img src="https://images.unsplash.com/photo-1559925393-8be0ec4767c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Quán cafe view đẹp">
+                        <div class="photo-caption">Quán cafe view đẹp</div>
                     </div>
                 </div>
             </div>
         </div>
-    </header>
 
-    <section id="features" class="section-dark py-5">
-        <div class="container py-5">
-            <div class="row g-4 mb-4 align-items-end reveal">
-                <div class="col-lg-7">
-                    <span class="text-info fw-bold small">SẢN PHẨM CHO KÝ ỨC DU LỊCH</span>
-                    <h2 class="display-6 fw-bold mt-2">Không chỉ là dashboard, đây là <span class="text-gradient">bản đồ cảm xúc</span> của bạn.</h2>
-                </div>
-                <div class="col-lg-5 text-lg-end text-white-50">Timeline, album, friend system, AI caption và profile du lịch được gom trong một trải nghiệm gọn gàng.</div>
-            </div>
-            <div class="row g-4 stagger-children">
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="bi bi-map"></i></div>
-                        <h5 class="fw-bold">Bản đồ sống động</h5>
-                        <p class="text-white-50 mb-0">Marker ảnh, đường di chuyển, dark map và heatmap giúp hành trình có chiều sâu hơn.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background:#fda4af"><i class="bi bi-images"></i></div>
-                        <h5 class="fw-bold">Album như Pinterest</h5>
-                        <p class="text-white-50 mb-0">Masonry grid, lightbox fullscreen, slideshow và hiệu ứng fade cho ảnh và video.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background:#c4b5fd"><i class="bi bi-stars"></i></div>
-                        <h5 class="fw-bold">Travel Memory AI</h5>
-                        <p class="text-white-50 mb-0">Viết caption, tạo nhật ký, gợi ý cảm xúc, story ngắn và địa điểm gần đó.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    </div>
 
-    <section class="section-soft py-5">
-        <div class="container py-5">
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-5 reveal">
-                    <span class="text-primary fw-bold small">TIMELINE HÀNH TRÌNH</span>
-                    <h2 class="fw-bold display-6 mt-2">Mỗi mốc thời gian đều có ngày, nơi đến, mood, thời tiết và số ảnh.</h2>
-                    <p class="text-muted">Thiết kế mới giúp người dùng đọc lại hành trình như một nhật ký, không phải một danh sách CRUD.</p>
-                </div>
-                <div class="col-lg-7 reveal reveal-delay-1">
-                    <div class="timeline-preview stagger-children">
-                        <div class="timeline-row">
-                            <div class="small text-muted">21/05/2026</div>
-                            <h5 class="fw-bold mb-2">Hải Dương</h5>
-                            <div class="d-flex flex-wrap gap-2 small">
-                                <span class="badge text-bg-light">Hạnh phúc</span>
-                                <span class="badge text-bg-light">Trời đẹp</span>
-                                <span class="badge text-bg-light">12 ảnh</span>
-                            </div>
-                        </div>
-                        <div class="timeline-row">
-                            <div class="small text-muted">14/04/2026</div>
-                            <h5 class="fw-bold mb-2">Cat Ba</h5>
-                            <div class="d-flex flex-wrap gap-2 small">
-                                <span class="badge text-bg-light">Tự do</span>
-                                <span class="badge text-bg-light">Gió biển</span>
-                                <span class="badge text-bg-light">28 ảnh</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-4 mt-4 stagger-children">
-                <div class="col-6 col-lg-3"><div class="metric"><div class="h3 fw-bold mb-0" data-count="18">0</div><small class="text-muted">địa điểm</small></div></div>
-                <div class="col-6 col-lg-3"><div class="metric"><div class="h3 fw-bold mb-0" data-count="520">0</div><small class="text-muted">ảnh đã lưu</small></div></div>
-                <div class="col-6 col-lg-3"><div class="metric"><div class="h3 fw-bold mb-0" data-count="6">0</div><small class="text-muted">tỉnh thành</small></div></div>
-                <div class="col-6 col-lg-3"><div class="metric"><div class="h3 fw-bold mb-0" data-count="1240">0</div><small class="text-muted">km ký ức</small></div></div>
-            </div>
-        </div>
-    </section>
+    <!-- 3. Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active">
+            <i class="bi bi-house-door-fill"></i>
+            Home
+        </a>
+        <a href="#" class="nav-item">
+            <i class="bi bi-geo-alt-fill"></i>
+            Map
+        </a>
+        <a href="#" class="nav-item-camera">
+            <i class="bi bi-camera-fill"></i>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="bi bi-images"></i>
+            Album
+        </a>
+        <a href="#" class="nav-item">
+            <i class="bi bi-people-fill"></i>
+            Friends
+        </a>
+    </div>
 
-    <footer class="section-dark py-4 border-top border-white border-opacity-10">
-        <div class="container d-flex flex-column flex-md-row justify-content-between gap-2 text-white-50">
-            <span>&copy; 2026 Travel Memory Map.</span>
-            <span>Built for journeys, photos, friends and feelings.</span>
-        </div>
-    </footer>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Navbar thu gọn khi cuộn
-        const nav = document.querySelector('.nav-glass');
-        window.addEventListener('scroll', () => {
-            nav?.classList.toggle('scrolled', window.scrollY > 40);
-        }, { passive: true });
-
-        // Scroll reveal
-        const revealObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('revealed');
-                    revealObserver.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-
-        document.querySelectorAll('.reveal, .stagger-children').forEach(el => revealObserver.observe(el));
-
-        // Đếm số động cho metrics
-        function animateCounter(el, target, duration = 1400) {
-            const start = performance.now();
-            const update = (now) => {
-                const progress = Math.min((now - start) / duration, 1);
-                const eased = 1 - Math.pow(1 - progress, 3);
-                el.textContent = Math.floor(eased * target).toLocaleString('vi-VN');
-                if (progress < 1) requestAnimationFrame(update);
-                else el.textContent = target.toLocaleString('vi-VN');
-            };
-            requestAnimationFrame(update);
-        }
-
-        const counterObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                const el = entry.target;
-                const target = parseInt(el.dataset.count, 10);
-                if (!isNaN(target)) {
-                    el.classList.add('metric-counting');
-                    animateCounter(el, target);
-                }
-                counterObserver.unobserve(el);
-            });
-        }, { threshold: 0.5 });
-
-        document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
-    </script>
 </body>
 </html>
