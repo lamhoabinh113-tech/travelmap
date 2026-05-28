@@ -224,8 +224,8 @@
                                 </div>
                             <?php endif; ?>
                             <?php else: ?>
-                                <div class="memory-img d-flex align-items-center justify-content-center bg-light">
-                                    <i class="bi bi-camera text-muted fs-2"></i>
+                                <div class="memory-img-placeholder">
+                                    <i class="bi bi-camera"></i>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -304,8 +304,11 @@
 
         <!-- TAB 3: Album -->
         <div id="tab-album" class="tab-content-section">
-            <h5 class="fw-bold mb-4">Tất cả ảnh & Video</h5>
-            <div class="row g-2">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Tất cả ảnh & Video</h5>
+                <small class="text-muted"><?php echo $photo_count; ?> mục</small>
+            </div>
+            <div class="album-grid">
                 <?php 
                 $has_images = false;
                 foreach($locations as $loc) {
@@ -313,19 +316,18 @@
                         $has_images = true;
                         $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION));
                         $is_video = in_array($ext, ['mp4', 'webm', 'ogg', 'mov']);
-                        echo '<div class="col-6 col-md-4">';
-                        echo '<div style="position:relative; width:100%; padding-bottom:100%; border-radius:12px; overflow:hidden;" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars($loc['place_name']).'\')">';
+                        echo '<div class="album-cell" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars($loc['place_name']).'\')">';
                         if($is_video) {
-                            echo '<video style="position:absolute; width:100%; height:100%; object-fit:cover;"><source src="../uploads/'.$loc['image'].'" type="video/mp4"></video>';
-                            echo '<i class="bi bi-play-circle-fill text-white fs-2" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></i>';
+                            echo '<video><source src="../uploads/'.$loc['image'].'" type="video/mp4"></video>';
+                            echo '<div class="play-icon"><i class="bi bi-play-circle-fill"></i></div>';
                         } else {
-                            echo '<img src="../uploads/'.$loc['image'].'" style="position:absolute; width:100%; height:100%; object-fit:cover;">';
+                            echo '<img src="../uploads/'.$loc['image'].'" alt="'.htmlspecialchars($loc['place_name']).'">';
                         }
-                        echo '</div></div>';
+                        echo '</div>';
                     }
                 }
                 if(!$has_images) {
-                    echo '<div class="col-12 text-center text-muted py-4"><i class="bi bi-images display-4 opacity-25"></i><br>Chưa có ảnh nào</div>';
+                    echo '<div style="grid-column:1/-1; text-align:center; padding:48px 0; color:#94a3b8;"><i class="bi bi-images" style="font-size:48px; opacity:.4;"></i><br><br>Chưa có ảnh nào. Hãy thêm kỷ niệm đầu tiên!</div>';
                 }
                 ?>
             </div>
@@ -333,26 +335,26 @@
 
     </div>
 
-    <!-- 3. Bottom Navigation -->
+    <!-- 3. Bottom Navigation (Grid: 2 + FAB + 2) -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('timeline');">
+        <div class="nav-item active" id="nav-home" onclick="switchTab('timeline'); setActiveNav('nav-home')">
             <i class="bi bi-house-door-fill"></i>
-            Home
+            <span>Trang chủ</span>
         </div>
-        <div class="nav-item" onclick="window.scrollTo(0,0);">
-            <i class="bi bi-geo-alt-fill"></i>
-            Map
+        <div class="nav-item" id="nav-map" onclick="scrollToMap(); setActiveNav('nav-map')">
+            <i class="bi bi-map-fill"></i>
+            <span>Bản đồ</span>
         </div>
-        <div class="nav-item-camera" onclick="openLocketCamera()">
+        <div class="nav-item-camera" onclick="openLocketCamera()" title="Chụp ảnh">
             <i class="bi bi-camera-fill"></i>
         </div>
-        <div class="nav-item" onclick="switchTab('album');">
+        <div class="nav-item" id="nav-album" onclick="switchTab('album'); setActiveNav('nav-album')">
             <i class="bi bi-images"></i>
-            Album
+            <span>Album</span>
         </div>
-        <div class="nav-item" onclick="switchTab('friends');">
+        <div class="nav-item" id="nav-friends" onclick="switchTab('friends'); setActiveNav('nav-friends')">
             <i class="bi bi-people-fill"></i>
-            Friends
+            <span>Bạn bè</span>
         </div>
     </div>
 </div>
@@ -1732,22 +1734,33 @@
 
 
 <script>
+    // Switch tab content
     function switchTab(tabId) {
+        // Tab indicators (top tabs)
         document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
-        
-        event.currentTarget.classList.add('active');
-        
+        const tabEl = document.querySelector(`.tab-item[onclick*="'${tabId}'"]`);
+        if (tabEl) tabEl.classList.add('active');
+
+        // Tab content panels
         document.querySelectorAll('.tab-content-section').forEach(el => el.classList.remove('active'));
-        
         const target = document.getElementById('tab-' + tabId);
-        if(target) {
-            target.classList.add('active');
-        }
-        
-        if (typeof map !== 'undefined') {
-            setTimeout(() => { map.invalidateSize(); }, 300);
-        }
+        if (target) target.classList.add('active');
+
+        // Re-render map tiles if needed
+        if (typeof map !== 'undefined') setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    // Highlight the correct bottom-nav button
+    function setActiveNav(id) {
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+    }
+
+    // Scroll page to top so map is visible
+    function scrollToMap() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof map !== 'undefined') setTimeout(() => map.invalidateSize(), 400);
     }
 </script>
 
