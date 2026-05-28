@@ -563,24 +563,7 @@
     </div>
 </div>
 
-<!-- Bottom Navigation Bar (Mobile) -->
-<nav class="bottom-nav">
-    <div class="bottom-nav-item active" onclick="switchMobileTab('map', this)">
-        <i class="bi bi-map-fill"></i>
-        <span>Bản đồ</span>
-    </div>
-    <div class="bottom-nav-item" onclick="switchMobileTab('profile', this)">
-        <i class="bi bi-person-circle"></i>
-        <span>Cá nhân</span>
-    </div>
-    <div class="bottom-nav-item center-cam" onclick="openLocketCamera()">
-        <i class="bi bi-camera-fill"></i>
-    </div>
-    <div class="bottom-nav-item" onclick="switchMobileTab('social', this)">
-        <i class="bi bi-people-fill"></i>
-        <span>Bạn bè</span>
-    </div>
-</nav>
+
 
 <!-- JS Dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
