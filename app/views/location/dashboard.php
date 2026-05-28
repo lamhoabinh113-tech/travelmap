@@ -1472,11 +1472,7 @@
         canvasElem.width = videoElem.videoWidth;
         canvasElem.height = videoElem.videoHeight;
         
-        // Nếu dùng camera trước, lật ảnh lại cho đỡ ngược
-        if (currentFacingMode === "user") {
-            ctx.translate(canvasElem.width, 0);
-            ctx.scale(-1, 1);
-        }
+        // Không lật ảnh nữa để giống hệt như những gì nhìn thấy trên camera
         
         ctx.drawImage(videoElem, 0, 0, canvasElem.width, canvasElem.height);
         capturedPhotoBase64 = canvasElem.toDataURL('image/jpeg', 0.8);
@@ -1510,11 +1506,16 @@
             return;
         }
 
-        const caption = document.getElementById('locketCaption').value || 'Một khoảnh khắc tuyệt vời';
-        const privacy = document.getElementById('locketPrivacy').value || 'friends';
-        const postBtn = document.querySelector('.btn-locket-post');
-        postBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang đăng...';
-        postBtn.disabled = true;
+        const caption = document.getElementById('locketCaption') ? document.getElementById('locketCaption').value : 'Một khoảnh khắc tuyệt vời';
+        const privacyElement = document.getElementById('locketPrivacy');
+        const privacy = privacyElement ? privacyElement.value : 'friends';
+        
+        const postBtn = document.querySelector('button[onclick="postLocketPhoto()"]');
+        const oldBtnText = postBtn ? postBtn.innerHTML : '';
+        if (postBtn) {
+            postBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang đăng...';
+            postBtn.disabled = true;
+        }
 
         fetch('index.php?url=location/saveLocket', {
             method: 'POST',
@@ -1567,8 +1568,10 @@
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 alert("Lỗi: " + data.message);
-                postBtn.innerHTML = '<i class="bi bi-send-fill"></i> Đăng ngay lên bản đồ';
-                postBtn.disabled = false;
+                    if (postBtn) {
+                        postBtn.innerHTML = oldBtnText;
+                        postBtn.disabled = false;
+                    }
             }
         })
         .catch(err => {
