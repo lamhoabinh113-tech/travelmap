@@ -722,3 +722,7 @@ html, body {
     .bottom-nav  { left: 50%; }
     .app-container { box-shadow: 0 0 80px rgba(0,0,0,.22); }
 }
+@media (min-width: 768px) {
+    .app-container { max-width: 800px; margin-top: 20px; margin-bottom: 20px; border-radius: 20px; min-height: calc(100vh - 40px); overflow: hidden; }
+    .bottom-nav { max-width: 800px; border-radius: 0 0 20px 20px; }
+}
