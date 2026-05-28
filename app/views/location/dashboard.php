@@ -21,7 +21,7 @@
     </script>
     
     
-    <link rel="stylesheet" href="css/dashboard_mobile.css">
+    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.1">
 </head>
 <body>
 <?php
@@ -551,7 +551,40 @@
     </div>
 </div>
 
+<!-- CAMERA OVERLAY -->
+<div id="locketCameraUI" class="locket-camera-overlay">
+    <div class="camera-header">
+        <div class="camera-close" onclick="closeLocketCamera()"><i class="bi bi-x-lg"></i></div>
+        <div class="camera-close" onclick="switchCamera()"><i class="bi bi-arrow-repeat"></i></div>
+    </div>
+    <div class="camera-viewfinder">
+        <video id="cameraVideo" autoplay playsinline></video>
+        <canvas id="photoPreviewCanvas"></canvas>
+        <div id="cameraError">
+            <i class="bi bi-exclamation-triangle-fill fs-1 text-warning mb-2"></i>
+            <div id="cameraErrorMsg">Lỗi Camera</div>
+        </div>
+    </div>
+    
+    <div id="cameraControls" class="camera-controls">
+        <div class="capture-btn-outer" onclick="capturePhoto()">
+            <div class="capture-btn-inner"></div>
+        </div>
+        <div id="camLocationStatus" style="position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(255,255,255,0.7); font-size: 11px;"></div>
+    </div>
 
+    <div id="postControls" class="post-controls">
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-secondary flex-fill rounded-pill" onclick="retakePhoto()"><i class="bi bi-arrow-counterclockwise"></i> Chụp lại</button>
+            <button class="btn btn-primary flex-fill rounded-pill fw-bold" onclick="postLocketPhoto()"><i class="bi bi-send-fill"></i> Đăng ngay</button>
+        </div>
+        <input type="text" id="locketCaption" class="caption-input" placeholder="Thêm mô tả cho khoảnh khắc này...">
+        <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: none;">
+            <button class="btn btn-outline-light rounded-pill btn-sm text-nowrap" onclick="postLocketPhoto('Bạn Bè')">Đăng vào Bạn Bè</button>
+            <button class="btn btn-outline-light rounded-pill btn-sm text-nowrap" onclick="postLocketPhoto('Gia đình')">Đăng vào Gia đình</button>
+        </div>
+    </div>
+</div>
 
 <!-- JS Dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
