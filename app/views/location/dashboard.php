@@ -1650,7 +1650,7 @@
                         $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION));
                         $is_video = in_array($ext, ['mp4', 'webm', 'ogg', 'mov']);
                         echo '<div class="col-6 col-md-4">';
-                        echo '<div style="position:relative; width:100%; padding-bottom:100%; border-radius:12px; overflow:hidden;" onclick="openAlbum('.$loc['id'].', ''.htmlspecialchars($loc['place_name']).'')">';
+                        echo '<div style="position:relative; width:100%; padding-bottom:100%; border-radius:12px; overflow:hidden;" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars($loc['place_name']).'\')">';
                         if($is_video) {
                             echo '<video style="position:absolute; width:100%; height:100%; object-fit:cover;"><source src="../uploads/'.$loc['image'].'" type="video/mp4"></video>';
                             echo '<i class="bi bi-play-circle-fill text-white fs-2" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);"></i>';
