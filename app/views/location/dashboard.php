@@ -123,20 +123,7 @@
     <!-- 2. Main Content -->
     <div class="main-content">
         <!-- Tabs -->
-        <div class="tabs">
-            <div class="tab-item active" onclick="switchTab('timeline')">
-                <i class="bi bi-signpost-2" style="color: #3b82f6;"></i>
-                Lịch trình
-            </div>
-            <div class="tab-item" onclick="switchTab('friends')">
-                <i class="bi bi-people-fill" style="color: #8b5cf6;"></i>
-                Bạn Bè
-            </div>
-            <div class="tab-item" onclick="switchTab('album')">
-                <i class="bi bi-journal-album" style="color: #f59e0b;"></i>
-                Album
-            </div>
-        </div>
+
 
         <!-- TAB 1: Timeline -->
         <div id="tab-timeline" class="tab-content-section active">
