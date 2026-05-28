@@ -111,6 +111,7 @@
             <button type="button" id="lightMapBtn" onclick="setMapTheme('light')" title="Bản đồ sáng"><i class="bi bi-brightness-high-fill"></i></button>
             <button type="button" class="active" id="followLocationBtn" onclick="toggleFollowLocation()" title="Theo dõi vị trí thực tế"><i class="bi bi-crosshair"></i></button>
             <button type="button" onclick="refreshMyLocation()" title="Định vị lại (GPS chính xác)"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" onclick="window.location.href='index.php?url=auth/logout'" title="Đăng xuất" style="background: rgba(239, 68, 68, 0.8);"><i class="bi bi-box-arrow-right"></i></button>
         </div>
 
         <div id="liveLocationHud" class="live-location-hud" style="display:none;">
