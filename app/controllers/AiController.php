@@ -66,17 +66,23 @@ class AiController {
         $context = $this->collectTravelContext($question, $latitude, $longitude, $_SESSION['user_id']);
         $localAnswer = $this->smartLocalRespond($question, $context);
 
+        $geminiKey = getenv('GEMINI_API_KEY');
+        if ($geminiKey) {
+            $remoteAnswer = $this->geminiChat($question, $latitude, $longitude, $context, $geminiKey);
+            if (!$this->isWeakAiReply($remoteAnswer)) {
+                return $remoteAnswer;
+            }
+        }
+
         $openaiKey = getenv('OPENAI_API_KEY');
-        if (!$openaiKey) {
-            return $localAnswer;
+        if ($openaiKey) {
+            $remoteAnswer = $this->openAiChat($question, $latitude, $longitude, $context, $openaiKey);
+            if (!$this->isWeakAiReply($remoteAnswer)) {
+                return $remoteAnswer;
+            }
         }
 
-        $remoteAnswer = $this->openAiChat($question, $latitude, $longitude, $context, $openaiKey);
-        if ($this->isWeakAiReply($remoteAnswer)) {
-            return $localAnswer;
-        }
-
-        return $remoteAnswer;
+        return $localAnswer;
     }
 
     private function isWeakAiReply($text) {
@@ -132,6 +138,31 @@ CÁCH TRẢ LỜI:
 
 KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, và mở rộng thêm khi phù hợp.';
     }
+
+    private function geminiChat($question, $latitude, $longitude, $context, $apiKey) {
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey;
+        $systemInstruction = $this->getSystemPrompt($context);
+        $userPrompt = $this->buildPrompt($question, $latitude, $longitude, $context);
+
+        $payload = [
+            'systemInstruction' => [
+                'parts' => [['text' => $systemInstruction]]
+            ],
+            'contents' => [
+                ['parts' => [['text' => $userPrompt]]]
+            ]
+        ];
+
+        $response = $this->httpPost($url, json_encode($payload, JSON_UNESCAPED_UNICODE), ['Content-Type: application/json']);
+        if (!$response) return null;
+
+        $data = json_decode($response, true);
+        if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+            return trim($data['candidates'][0]['content']['parts'][0]['text']);
+        }
+        return null;
+    }
+
 
     private function openAiChat($question, $latitude, $longitude, $context, $apiKey) {
         $payload = [

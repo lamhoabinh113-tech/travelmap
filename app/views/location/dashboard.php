@@ -14,11 +14,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="css/style.css">
     
-    <script>
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-            location.replace(`https:${location.href.substring(location.protocol.length)}`);
-        }
-    </script>
+    <!-- Script forcing HTTPS removed to allow local network IP access -->
     
     
     <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.1">
@@ -71,10 +67,6 @@
     $explorer_level = max(1, min(9, (int)ceil($journey_count / 5)));
 ?>
 
-
-    <link rel="stylesheet" href="css/dashboard_mobile.css">
-</head>
-<body>
 
 <div class="app-container">
     
@@ -594,10 +586,7 @@
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 
 <script>
-    // Force HTTPS for better GPS accuracy
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-        location.replace(`https:${location.href.substring(location.protocol.length)}`);
-    }
+    // HTTPS force removed
     // Initialize Map
     var map = L.map('map', {
         zoomControl: false
@@ -700,7 +689,7 @@
             maxZoom: 20
         })
     };
-    let activeMapLayer = mapLayers.dark.addTo(map);
+    let activeMapLayer = mapLayers.light.addTo(map);
 
     // Markers Data
     var savedLocations = <?php echo json_encode($locations); ?>;
