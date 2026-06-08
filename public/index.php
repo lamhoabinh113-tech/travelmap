@@ -6,6 +6,11 @@
 
 session_start();
 
+// Bật hiển thị lỗi để debug lỗi 500 trên host
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Ngăn trình duyệt lưu cache trang HTML để tránh lỗi lưu thông tin tài khoản cũ
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
