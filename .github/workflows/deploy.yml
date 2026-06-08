@@ -20,7 +20,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./
-        server-dir: htdocs/
+        server-dir: travelmap.page.gd/htdocs/
         exclude: |
           **/.git*
           **/.git*/**
@@ -31,3 +31,4 @@ jobs:
           dashboard_rendered.html
           app/controllers/dashboard_debug.txt
           app/controllers/login_debug.txt
+          config/db_config.php

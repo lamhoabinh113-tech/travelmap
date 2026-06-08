@@ -485,6 +485,34 @@ h6.fw-bold { color: var(--text-strong); font-size: 16px; font-weight: 700; margi
 .ai-chat-fab:active { box-shadow: var(--neu-shadow-pressed); }
 @media (min-width: 480px) { .ai-chat-fab { right: calc(50vw - 240px + 20px); } }
 
+/* ─── FLOATING MAP FAB (Mobile only) ─── */
+.mobile-map-fab {
+    position: fixed;
+    bottom: calc(var(--nav-h) + 90px);
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--neu-shadow-flat);
+    cursor: pointer;
+    z-index: 800;
+    transition: all .2s;
+}
+.mobile-map-fab:active {
+    box-shadow: var(--neu-shadow-pressed);
+}
+@media (min-width: 480px) {
+    .mobile-map-fab {
+        right: calc(50vw - 240px + 20px);
+    }
+}
+
 /* ─── MODALS & FORMS (Glassmorphic overrides) ─── */
 .modal-content {
     background: var(--surface);
@@ -634,6 +662,10 @@ h6.fw-bold { color: var(--text-strong); font-size: 16px; font-weight: 700; margi
     .ai-chat-fab {
         right: 40px;
         bottom: 120px;
+    }
+    
+    .mobile-map-fab {
+        display: none !important;
     }
     
     /* Move profile and map controls to avoid overlapping with right content */

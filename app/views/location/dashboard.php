@@ -432,24 +432,24 @@
 
     <!-- 3. Bottom Navigation (Grid: 2 + FAB + 2) -->
     <div class="bottom-nav">
-        <div class="nav-item active" id="nav-home" onclick="switchTab('timeline'); setActiveNav('nav-home')">
+        <div class="nav-item active" id="nav-timeline" onclick="switchTab('timeline'); setActiveNav('nav-timeline')">
             <i class="bi bi-house-door-fill"></i>
             <span>Trang chủ</span>
-        </div>
-        <div class="nav-item" id="nav-map" onclick="scrollToMap(); setActiveNav('nav-map')">
-            <i class="bi bi-map-fill"></i>
-            <span>Bản đồ</span>
-        </div>
-        <div class="nav-item-camera" onclick="openLocketCamera()" title="Chụp ảnh">
-            <i class="bi bi-camera-fill"></i>
         </div>
         <div class="nav-item" id="nav-album" onclick="switchTab('album'); setActiveNav('nav-album')">
             <i class="bi bi-images"></i>
             <span>Album</span>
         </div>
+        <div class="nav-item-camera" onclick="openLocketCamera()" title="Chụp ảnh">
+            <i class="bi bi-camera-fill"></i>
+        </div>
         <div class="nav-item" id="nav-trips" onclick="switchTab('trips'); setActiveNav('nav-trips')">
             <i class="bi bi-briefcase-fill"></i>
             <span>Chuyến đi</span>
+        </div>
+        <div class="nav-item" id="nav-friends" onclick="switchTab('friends'); setActiveNav('nav-friends')">
+            <i class="bi bi-people-fill"></i>
+            <span>Bạn bè</span>
         </div>
     </div>
 </div>
@@ -2265,6 +2265,11 @@
     }
 </script>
 
+
+    <!-- Floating Map Button (Mobile only) -->
+    <div class="mobile-map-fab" onclick="scrollToMap()">
+        <i class="bi bi-map-fill"></i>
+    </div>
 
     <!-- Floating AI Chat -->
     <div class="ai-chat-fab" onclick="toggleAIChat()">
