@@ -19,3 +19,6 @@ uploads/avatars/*
 
 # Database backups & local SQL dumps
 *.sql
+
+# Local automation scripts
+watch.ps1
