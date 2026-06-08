@@ -6,11 +6,25 @@
 
 session_start();
 
+// Ngăn trình duyệt lưu cache trang HTML để tránh lỗi lưu thông tin tài khoản cũ
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 // Tự động load các file cần thiết
 require_once '../config/database.php';
 
-// Định nghĩa base path (điều chỉnh nếu bạn để trong thư mục con của htdocs)
-define('BASE_URL', ''); 
+// ============================================================
+// Tự động phát hiện BASE_PATH từ filesystem — chính xác 100%
+// Không bị ảnh hưởng bởi mod_rewrite hay URL rewriting
+// ============================================================
+$docRoot  = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']), '/');
+$projRoot = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');  // thư mục gốc project (trên public/)
+$basePath = str_replace($docRoot, '', $projRoot);                  // vd: /travel-memory-map
+
+define('BASE_PATH',   $basePath);
+define('UPLOADS_URL', $basePath . '/uploads');                     // /travel-memory-map/uploads
+define('BASE_URL',    $basePath . '/public/index.php');
 
 // Lấy controller và action từ URL (ví dụ: index.php?url=auth/login)
 $url = isset($_GET['url']) ? $_GET['url'] : 'home';

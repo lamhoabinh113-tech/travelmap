@@ -6,18 +6,27 @@
     <title>Hành Trình Của Bạn - Travel Memory Map</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- CSS Dependencies -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Control Geocoder -->
+    <!-- CSS Dependencies (Sử dụng cdnjs cho ổn định) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(function() {
+                console.log('Service Worker Registered');
+            });
+        }
+    </script>
     
     <!-- Script forcing HTTPS removed to allow local network IP access -->
     
     
-    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.1">
+    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.3">
 </head>
 <body>
 <?php
@@ -65,6 +74,69 @@
     arsort($mood_counts);
     $dominant_mood = array_key_first($mood_counts) ?: 'Dang cho ky uc moi';
     $explorer_level = max(1, min(9, (int)ceil($journey_count / 5)));
+
+    // =========================================================
+    // Helper function: render ảnh/video nhất quán toàn app
+    // $context: 'card' (timeline/friends) | 'album' (album grid)
+    // =========================================================
+    function renderMedia(string $filename, int $height = 160, string $context = 'card'): string {
+        if (empty($filename)) {
+            // Placeholder không ảnh — dùng class gốc của CSS
+            return '<div class="memory-img-placeholder"><i class="bi bi-camera"></i></div>';
+        }
+        $url   = UPLOADS_URL . '/' . htmlspecialchars($filename);
+        $ext   = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov']);
+        $mime  = $ext === 'mov' ? 'mp4' : $ext;
+
+        if ($context === 'album') {
+            // Album grid: img/video tự fill theo CSS .album-cell img
+            if ($isVid) {
+                return '<video muted preload="none"><source src="' . $url . '" type="video/' . $mime . '"></video>'
+                     . '<div class="play-icon"><i class="bi bi-play-circle-fill"></i></div>';
+            }
+            return '<img src="' . $url . '" alt="" loading="lazy">';
+        }
+
+        // Timeline / friend card: dùng class .memory-img gốc (aspect-ratio 4/3 từ CSS)
+        if ($isVid) {
+            return '<video class="memory-img" muted preload="none">'
+                 . '<source src="' . $url . '" type="video/' . $mime . '">'
+                 . '</video>'
+                 . '<div class="album-badge" style="bottom:50%;right:50%;transform:translate(50%,50%);font-size:24px;background:rgba(0,0,0,.35);color:#fff;padding:12px;border-radius:50%;">'
+                 . '<i class="bi bi-play-circle-fill"></i></div>';
+        }
+        return '<img src="' . $url . '" class="memory-img" alt="" loading="lazy"'
+             . ' onerror="this.style.display=\'none\'">';
+    }
+
+    function renderReactionBtn($id, $is_liked, $like_count, $reaction_type) {
+        $icon = '<i class="bi bi-heart"></i>';
+        $color = '#64748b';
+        if ($is_liked) {
+            $type = $reaction_type ?: 'heart';
+            if ($type === 'like') { $icon = '👍'; $color = '#3b5998'; }
+            elseif ($type === 'heart') { $icon = '<i class="bi bi-heart-fill"></i>'; $color = '#ef4444'; }
+            elseif ($type === 'haha') { $icon = '😂'; $color = '#f59e0b'; }
+            elseif ($type === 'wow') { $icon = '😮'; $color = '#f59e0b'; }
+            elseif ($type === 'sad') { $icon = '😢'; $color = '#f59e0b'; }
+        }
+
+        return '
+        <div class="reaction-container" onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-light rounded-pill py-0 px-2 reaction-btn" style="font-size:12px; color: '.$color.';" onclick="toggleReactionMenu(this)">
+                <span class="r-icon">'.$icon.'</span>
+                <span class="like-count ms-1">'.$like_count.'</span>
+            </button>
+            <div class="reaction-popup">
+                <span class="reaction-icon" onclick="toggleLike('.$id.', \'like\', this.closest(\'.reaction-container\').querySelector(\'.reaction-btn\'))">👍</span>
+                <span class="reaction-icon" onclick="toggleLike('.$id.', \'heart\', this.closest(\'.reaction-container\').querySelector(\'.reaction-btn\'))">❤️</span>
+                <span class="reaction-icon" onclick="toggleLike('.$id.', \'haha\', this.closest(\'.reaction-container\').querySelector(\'.reaction-btn\'))">😂</span>
+                <span class="reaction-icon" onclick="toggleLike('.$id.', \'wow\', this.closest(\'.reaction-container\').querySelector(\'.reaction-btn\'))">😮</span>
+                <span class="reaction-icon" onclick="toggleLike('.$id.', \'sad\', this.closest(\'.reaction-container\').querySelector(\'.reaction-btn\'))">😢</span>
+            </div>
+        </div>';
+    }
 ?>
 
 
@@ -75,7 +147,7 @@
         <div id="map"></div>
         
         <!-- Profile Badge -->
-        <div class="profile-badge" onclick="openAvatarUploader()">
+        <div class="profile-badge" data-bs-toggle="modal" data-bs-target="#profileModal" style="cursor: pointer;">
             <div class="avatar-placeholder" style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: #ddd; color: #555;">
                 <?php if (!empty($_SESSION['avatar'])): ?>
                     <img src="<?php echo htmlspecialchars($_SESSION['avatar']); ?>" alt="Avatar" style="width:100%; height:100%; object-fit: cover;">
@@ -85,7 +157,7 @@
             </div>
             <div class="profile-info">
                 <span class="profile-name"><?php echo $_SESSION['full_name']; ?></span>
-                <span class="profile-level">Explorer Lv.<?php echo $explorer_level; ?></span>
+                <span class="profile-level"><?php echo isset($badge_name) ? $badge_name : 'Explorer Lv.1'; ?> • <?php echo isset($user_xp) ? $user_xp : 0; ?> XP</span>
             </div>
         </div>
 
@@ -119,7 +191,6 @@
 
         <!-- TAB 1: Timeline -->
         <div id="tab-timeline" class="tab-content-section active">
-            <!-- AI Inline Chat Box -->
             <!-- New from Friends -->
             <?php if(!isset($is_friend_view) && !empty($friend_locations)): ?>
                 <div class="mb-4">
@@ -130,43 +201,55 @@
                     $top_friends = array_slice($friend_locations, 0, 3);
                     foreach($top_friends as $floc): 
                     ?>
-                        <div class="memory-item" style="background: #f0f7ff;" onclick="focusMemory(<?php echo (int)$floc['id']; ?>)">
+                        <div class="memory-item" style="background:#f0f7ff;" onclick="focusMemory(<?php echo (int)$floc['id']; ?>)">
                             <div class="d-flex align-items-center gap-2 mb-2">
-                                <div class="avatar-placeholder" style="width: 25px; height: 25px; font-size: 10px; border-radius: 8px;">
+                                <div class="avatar-placeholder" style="width:25px;height:25px;font-size:10px;border-radius:8px;">
                                     <?php echo strtoupper(substr($floc['username'], 0, 1)); ?>
                                 </div>
-                                <span class="small fw-bold text-primary"><?php echo $floc['full_name']; ?></span>
-                                <small class="text-muted ms-auto" style="font-size: 10px;"><?php echo date('d/m/Y', strtotime($floc['created_at'])); ?></small>
+                                <span class="small fw-bold text-primary"><?php echo htmlspecialchars($floc['full_name']); ?></span>
+                                <small class="text-muted ms-auto" style="font-size:10px;"><?php echo date('d/m/Y', strtotime($floc['created_at'])); ?></small>
                             </div>
-                            <div class="memory-img-wrapper" style="height: 100px;">
-                                <?php if($floc['image']): 
-                                    $fext = strtolower(pathinfo($floc['image'], PATHINFO_EXTENSION));
-                                    if (in_array($fext, ['mp4', 'webm', 'ogg', 'mov'])):
-                                ?>
-                                    <div class="d-flex align-items-center justify-content-center bg-dark w-100 h-100">
-                                        <i class="bi bi-play-circle text-white fs-2 position-absolute" style="z-index: 2;"></i>
-                                        <video class="memory-img" style="height: 100px; opacity: 0.5;">
-                                            <source src="../uploads/<?php echo $floc['image']; ?>" type="video/mp4">
-                                        </video>
-                                    </div>
-                                <?php else: ?>
-                                    <img src="../uploads/<?php echo $floc['image']; ?>" class="memory-img" style="height: 100px;">
-                                <?php endif; ?>
-                                <?php else: ?>
-                                    <div class="memory-img d-flex align-items-center justify-content-center bg-white" style="height: 100px;">
-                                        <i class="bi bi-geo-alt text-muted fs-4"></i>
-                                    </div>
-                                <?php endif; ?>
+                            <div class="memory-img-wrapper">
+                                <?= renderMedia($floc['image'], 130) ?>
                             </div>
-                            <h6 class="fw-bold mb-1 small"><?php echo $floc['place_name']; ?></h6>
-                            <p class="small text-muted mb-0 text-truncate" style="font-size: 11px;"><?php echo $floc['description']; ?></p>
+                            <h6 class="fw-bold mb-1 small mt-2"><?php echo htmlspecialchars($floc['place_name']); ?></h6>
+                            <p class="small text-muted mb-0 text-truncate" style="font-size:11px;"><?php echo htmlspecialchars($floc['description']); ?></p>
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
+                                <?php echo renderReactionBtn($floc['id'], $floc['is_liked'], $floc['like_count'], $floc['reaction_type'] ?? null); ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
 
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-signpost-split-fill me-2 text-primary"></i> TIMELINE</h6>
+            <?php if (isset($_GET['trip_id']) && isset($current_trip)): ?>
+                <!-- Trip Summary Banner -->
+                <div class="mb-4 bg-primary text-white rounded-4 p-3 shadow-sm" style="background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold mb-0 text-white"><i class="bi bi-geo-fill me-2"></i> <?php echo htmlspecialchars($current_trip['title']); ?></h5>
+                        <a href="index.php?url=location/dashboard" class="btn btn-sm btn-light rounded-pill px-3" style="font-size:12px; font-weight:bold;">
+                            <i class="bi bi-x-lg"></i> Xem tất cả
+                        </a>
+                    </div>
+                    <p class="small mb-2" style="opacity:0.9;"><?php echo htmlspecialchars($current_trip['description']); ?></p>
+                    <div class="d-flex gap-3 mt-3">
+                        <div class="text-center bg-white bg-opacity-25 rounded-3 p-2 flex-fill">
+                            <div class="small text-uppercase" style="font-size:10px; opacity:0.8;">Quãng đường</div>
+                            <div class="fw-bold fs-6"><?php echo number_format($total_distance ?? 0, 1); ?> km</div>
+                        </div>
+                        <div class="text-center bg-white bg-opacity-25 rounded-3 p-2 flex-fill">
+                            <div class="small text-uppercase" style="font-size:10px; opacity:0.8;">Điểm dừng</div>
+                            <div class="fw-bold fs-6"><?php echo count($locations); ?> điểm</div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+                <h6 class="small fw-bold text-muted mb-0">
+                    <i class="bi bi-signpost-split-fill me-2 text-primary"></i> 
+                    DÒNG THỜI GIAN
+                </h6>
                 <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addMemoryModal">
                     <i class="bi bi-plus-lg"></i> Thêm mới
                 </button>
@@ -181,37 +264,23 @@
                 <?php endif; ?>
 
                 <?php foreach($locations as $index => $loc): ?>
-                    <div class="memory-item" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
-                        <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, '<?php echo $loc['place_name']; ?>')">
-                            <?php if($loc['image']): 
-                                $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION));
-                                $video_exts = ['mp4', 'webm', 'ogg', 'mov'];
-                                if (in_array($ext, $video_exts)):
-                            ?>
-                                <div class="memory-img-wrapper" style="height: 140px; background: #000; display: flex; align-items: center; justify-content: center;">
-                                    <i class="bi bi-play-circle-fill text-white fs-1 position-absolute" style="z-index: 2; opacity: 0.8;"></i>
-                                    <video class="memory-img" style="opacity: 0.6;">
-                                        <source src="../uploads/<?php echo $loc['image']; ?>" type="video/mp4">
-                                    </video>
-                                </div>
+                    <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
+                        <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, '<?php echo addslashes($loc['place_name']); ?>')">
+                            <?= renderMedia($loc['image'], 160) ?>
+                            <?php if($loc['image']): ?>
+                                <?php $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION)); ?>
                                 <div class="album-badge">
-                                    <i class="bi bi-film me-1"></i> Video
-                                </div>
-                            <?php else: ?>
-                                <img src="../uploads/<?php echo $loc['image']; ?>" class="memory-img">
-                                <div class="album-badge">
-                                    <i class="bi bi-images me-1"></i> Album
-                                </div>
-                            <?php endif; ?>
-                            <?php else: ?>
-                                <div class="memory-img-placeholder">
-                                    <i class="bi bi-camera"></i>
+                                    <?php if(in_array($ext, ['mp4','webm','ogg','mov'])): ?>
+                                        <i class="bi bi-film me-1"></i> Video
+                                    <?php else: ?>
+                                        <i class="bi bi-images me-1"></i> Album
+                                    <?php endif; ?>
                                 </div>
                             <?php endif; ?>
                         </div>
                         
                         <div class="d-flex justify-content-between">
-                            <h6 class="fw-bold mb-1"><?php echo $loc['place_name']; ?></h6>
+                            <h6 class="fw-bold mb-1"><?php echo htmlspecialchars($loc['place_name']); ?></h6>
                             <?php if(!isset($is_friend_view)): ?>
                             <div class="d-flex gap-2">
                                 <a href="javascript:void(0)" class="text-primary opacity-50" onclick='event.stopPropagation(); openEditModal(<?php echo json_encode($loc); ?>)'><i class="bi bi-pencil-square"></i></a>
@@ -223,7 +292,10 @@
                             <span class="memory-chip"><i class="bi bi-calendar3 text-primary"></i> <?php echo date('d/m/Y', strtotime($loc['visit_date'])); ?></span>
                             <span class="memory-chip"><i class="bi bi-emoji-smile text-warning"></i> <?php echo htmlspecialchars($loc['feeling']); ?></span>
                         </div>
-                        <p class="small text-muted mb-0 text-truncate"><?php echo $loc['description']; ?></p>
+                        <p class="small text-muted mb-2 text-truncate"><?php echo htmlspecialchars($loc['description']); ?></p>
+                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                            <?php echo renderReactionBtn($loc['id'], $loc['is_liked'], $loc['like_count'], $loc['reaction_type'] ?? null); ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -285,31 +357,74 @@
         <!-- TAB 3: Album -->
         <div id="tab-album" class="tab-content-section">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0">Tất cả ảnh & Video</h5>
+                <h5 class="fw-bold mb-0">Tất cả ảnh &amp; Video</h5>
                 <small class="text-muted"><?php echo $photo_count; ?> mục</small>
             </div>
             <div class="album-grid">
-                <?php 
+                <?php
                 $has_images = false;
                 foreach($locations as $loc) {
                     if(!empty($loc['image'])) {
                         $has_images = true;
-                        $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION));
-                        $is_video = in_array($ext, ['mp4', 'webm', 'ogg', 'mov']);
-                        echo '<div class="album-cell" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars($loc['place_name']).'\')">';
-                        if($is_video) {
-                            echo '<video><source src="../uploads/'.$loc['image'].'" type="video/mp4"></video>';
-                            echo '<div class="play-icon"><i class="bi bi-play-circle-fill"></i></div>';
-                        } else {
-                            echo '<img src="../uploads/'.$loc['image'].'" alt="'.htmlspecialchars($loc['place_name']).'">';
-                        }
+                        echo '<div class="album-cell" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars(addslashes($loc['place_name'])).'\')">';
+                        echo renderMedia($loc['image'], 120, 'album');
                         echo '</div>';
                     }
                 }
                 if(!$has_images) {
-                    echo '<div style="grid-column:1/-1; text-align:center; padding:48px 0; color:#94a3b8;"><i class="bi bi-images" style="font-size:48px; opacity:.4;"></i><br><br>Chưa có ảnh nào. Hãy thêm kỷ niệm đầu tiên!</div>';
+                    echo '<div style="grid-column:1/-1;text-align:center;padding:48px 0;color:#94a3b8;"><i class="bi bi-images" style="font-size:48px;opacity:.4;"></i><br><br>Chưa có ảnh nào. Hãy thêm kỷ niệm đầu tiên!</div>';
                 }
                 ?>
+            </div>
+        </div>
+
+        <!-- TAB 4: Chuyến đi -->
+        <div id="tab-trips" class="tab-content-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0">Hành Trình Của Bạn</h5>
+                <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" onclick="createNewTrip()">
+                    <i class="bi bi-plus-lg"></i> Thêm chuyến đi
+                </button>
+            </div>
+            
+            <div class="row g-3">
+                <?php if(empty($trips)): ?>
+                    <div class="col-12 text-center py-5 opacity-50">
+                        <i class="bi bi-briefcase display-4"></i>
+                        <p class="mt-2">Bạn chưa tạo chuyến đi nào.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach($trips as $t): ?>
+                        <div class="col-12">
+                            <div class="p-3 bg-white rounded-4 shadow-sm border" style="cursor:pointer" onclick="filterMapByTrip(<?php echo $t['id']; ?>)">
+                                <h6 class="fw-bold text-primary mb-1"><?php echo htmlspecialchars($t['title']); ?></h6>
+                                <p class="small text-muted mb-2"><?php echo htmlspecialchars($t['description']); ?></p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="badge bg-light text-dark"><i class="bi bi-calendar3"></i> <?php echo $t['start_date'] ? date('d/m/Y', strtotime($t['start_date'])) : 'N/A'; ?></small>
+                                    <?php if ($t['user_id'] == $_SESSION['user_id']): ?>
+                                        <button class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size:12px;" onclick="event.stopPropagation(); openInviteModal(<?php echo $t['id']; ?>)">
+                                            <i class="bi bi-person-plus-fill"></i> Mời
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary text-white" style="font-size:10px;"><i class="bi bi-people-fill"></i> Chung</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            
+            <div class="mt-4 pt-3 border-top text-center">
+                <?php if (isset($_GET['trip_id'])): ?>
+                    <a href="index.php?url=location/stats&trip_id=<?php echo $_GET['trip_id']; ?>" class="btn btn-outline-primary rounded-pill w-100 fw-bold">
+                        <i class="bi bi-bar-chart-fill me-1"></i> Xem Thống Kê Chuyến Đi Này
+                    </a>
+                <?php else: ?>
+                    <a href="index.php?url=location/stats" class="btn btn-outline-primary rounded-pill w-100 fw-bold">
+                        <i class="bi bi-bar-chart-fill me-1"></i> Xem Thống Kê Tổng Hợp
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -332,9 +447,132 @@
             <i class="bi bi-images"></i>
             <span>Album</span>
         </div>
-        <div class="nav-item" id="nav-friends" onclick="switchTab('friends'); setActiveNav('nav-friends')">
-            <i class="bi bi-people-fill"></i>
-            <span>Bạn bè</span>
+        <div class="nav-item" id="nav-trips" onclick="switchTab('trips'); setActiveNav('nav-trips')">
+            <i class="bi bi-briefcase-fill"></i>
+            <span>Chuyến đi</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Mời Bạn Bè Vào Chuyến Đi -->
+<div class="modal fade" id="inviteTripModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 p-4">
+                <h5 class="modal-title fw-bold">Mời Tham Gia Hành Trình</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="invite_trip_id">
+                
+                <h6 class="small fw-bold text-muted mb-3"><i class="bi bi-people-fill me-2 text-primary"></i> CHỌN TỪ DANH SÁCH BẠN BÈ</h6>
+                <div class="list-group list-group-flush mb-4" style="max-height: 200px; overflow-y: auto;">
+                    <?php if(!empty($friends)): ?>
+                        <?php foreach($friends as $f): ?>
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-placeholder" style="width:30px;height:30px;font-size:12px;border-radius:50%;">
+                                        <?php echo strtoupper(substr($f['username'], 0, 1)); ?>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small"><?php echo htmlspecialchars($f['full_name']); ?></div>
+                                        <div class="text-muted" style="font-size:10px;">@<?php echo htmlspecialchars($f['username']); ?></div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-primary rounded-pill" style="font-size:11px;" onclick="sendTripInvite('<?php echo addslashes($f['username']); ?>')">
+                                    Mời
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="text-muted small">Bạn chưa kết bạn với ai.</div>
+                    <?php endif; ?>
+                </div>
+
+                <h6 class="small fw-bold text-muted mb-2"><i class="bi bi-search me-2 text-primary"></i> TÌM & MỜI THÊM BẠN MỚI</h6>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                    <input type="text" id="invite_username_input" class="form-control bg-light border-0" placeholder="Nhập tên hoặc username..." oninput="searchUsersForInvite(this.value)">
+                    <button class="btn btn-primary" type="button" onclick="sendTripInvite(document.getElementById('invite_username_input').value)">Mời</button>
+                </div>
+                <div id="invite_search_results" class="list-group list-group-flush mt-2" style="max-height: 150px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Hồ Sơ & Hành Trang -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 p-4">
+                <h5 class="modal-title fw-bold">Hành Trang Của Bạn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="position-relative d-inline-block mb-3">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary); margin: 0 auto; box-shadow: var(--neu-shadow-flat);">
+                        <?php if (!empty($_SESSION['avatar'])): ?>
+                            <img src="<?php echo htmlspecialchars($_SESSION['avatar']); ?>" alt="Avatar" style="width:100%; height:100%; object-fit: cover;">
+                        <?php else: ?>
+                            <img src="https://cdn-icons-png.flaticon.com/512/4140/4140044.png" alt="AI icon" style="width:100%; height:100%; object-fit: cover;">
+                        <?php endif; ?>
+                    </div>
+                    <button class="btn btn-sm btn-primary rounded-circle position-absolute" style="bottom: 0; right: 0; width: 32px; height: 32px; padding: 0;" onclick="openAvatarUploader()" title="Đổi ảnh đại diện">
+                        <i class="bi bi-camera-fill"></i>
+                    </button>
+                </div>
+                
+                <h4 class="fw-bold mb-1"><?php echo $_SESSION['full_name']; ?></h4>
+                <div class="badge bg-primary fs-6 mb-3"><?php echo isset($badge_name) ? $badge_name : 'Explorer Lv.1'; ?></div>
+                
+                <div class="bg-light rounded-4 p-3 mb-4 text-start">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-bold text-muted">KINH NGHIỆM TÍCH LŨY</span>
+                        <span class="small fw-bold text-primary"><?php echo isset($user_xp) ? $user_xp : 0; ?> XP</span>
+                    </div>
+                    <?php 
+                        $xp = isset($user_xp) ? $user_xp : 0;
+                        $next_level_xp = 100;
+                        if ($xp >= 1000) $next_level_xp = $xp; // Max level
+                        elseif ($xp >= 500) $next_level_xp = 1000;
+                        elseif ($xp >= 100) $next_level_xp = 500;
+                        $progress = ($xp >= 1000) ? 100 : min(100, ($xp / $next_level_xp) * 100);
+                    ?>
+                    <div class="progress" style="height: 10px; border-radius: 5px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: <?php echo $progress; ?>%"></div>
+                    </div>
+                    <small class="text-muted" style="font-size: 11px;">
+                        <?php if($xp >= 1000): ?>
+                            Bạn đã đạt cấp độ cao nhất!
+                        <?php else: ?>
+                            Cần <?php echo ($next_level_xp - $xp); ?> XP nữa để thăng cấp.
+                        <?php endif; ?>
+                    </small>
+                </div>
+
+                <div class="text-start">
+                    <h6 class="fw-bold small text-muted mb-3"><i class="bi bi-award-fill me-2 text-warning"></i> CÁC MỐC DANH HIỆU</h6>
+                    <ul class="list-group list-group-flush small">
+                        <li class="list-group-item bg-transparent d-flex justify-content-between px-0 <?php echo $xp < 100 ? 'fw-bold text-primary' : ''; ?>">
+                            <span><i class="bi <?php echo $xp >= 0 ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'; ?> me-2"></i> Explorer Lv.1</span>
+                            <span class="text-muted">0 XP</span>
+                        </li>
+                        <li class="list-group-item bg-transparent d-flex justify-content-between px-0 <?php echo $xp >= 100 && $xp < 500 ? 'fw-bold text-primary' : ''; ?>">
+                            <span><i class="bi <?php echo $xp >= 100 ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'; ?> me-2"></i> 🎒 Tân binh xê dịch</span>
+                            <span class="text-muted">100 XP</span>
+                        </li>
+                        <li class="list-group-item bg-transparent d-flex justify-content-between px-0 <?php echo $xp >= 500 && $xp < 1000 ? 'fw-bold text-primary' : ''; ?>">
+                            <span><i class="bi <?php echo $xp >= 500 ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'; ?> me-2"></i> 🗺️ Kẻ lang thang</span>
+                            <span class="text-muted">500 XP</span>
+                        </li>
+                        <li class="list-group-item bg-transparent d-flex justify-content-between px-0 border-bottom-0 <?php echo $xp >= 1000 ? 'fw-bold text-primary' : ''; ?>">
+                            <span><i class="bi <?php echo $xp >= 1000 ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'; ?> me-2"></i> 👑 Thánh Check-in</span>
+                            <span class="text-muted">1000 XP</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -372,6 +610,18 @@
                                 <option value="Nhớ nhung">🥺 Nhớ nhung</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CHUYẾN ĐI (TÙY CHỌN)</label>
+                        <select name="trip_id" class="form-select form-control-premium">
+                            <option value="">-- Không thuộc chuyến đi nào --</option>
+                            <?php if(!empty($trips)): ?>
+                                <?php foreach($trips as $t): ?>
+                                    <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
                     </div>
 
                     <div class="mb-3">
@@ -497,6 +747,18 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label small fw-bold">CHUYẾN ĐI (TÙY CHỌN)</label>
+                        <select name="trip_id" id="edit_trip_id" class="form-select form-control-premium">
+                            <option value="">-- Không thuộc chuyến đi nào --</option>
+                            <?php if(!empty($trips)): ?>
+                                <?php foreach($trips as $t): ?>
+                                    <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">MÔ TẢ NGẮN</label>
                         <textarea name="description" id="edit_description" class="form-control form-control-premium" rows="3"></textarea>
                     </div>
@@ -543,6 +805,39 @@
     </div>
 </div>
 
+
+<!-- Modal Tạo Chuyến Đi Mới -->
+<div class="modal fade" id="createTripModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0 p-4">
+                <h5 class="modal-title fw-bold">Tạo Chuyến Đi Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="index.php?url=trip/create" method="POST">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">TÊN CHUYẾN ĐI</label>
+                        <input type="text" name="title" class="form-control form-control-premium" placeholder="VD: Mùa hè rực rỡ ở Đà Nẵng" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">NGÀY BẮT ĐẦU</label>
+                        <input type="date" name="start_date" class="form-control form-control-premium" value="<?php echo date('Y-m-d'); ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">MÔ TẢ NGẮN (TÙY CHỌN)</label>
+                        <textarea name="description" class="form-control form-control-premium" rows="2" placeholder="Ghi chú thêm về chuyến đi..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 p-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-premium rounded-pill px-4"><i class="bi bi-plus-lg me-1"></i> Tạo Chuyến Đi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- CAMERA OVERLAY -->
 <div id="locketCameraUI" class="locket-camera-overlay">
     <div class="camera-header">
@@ -578,12 +873,16 @@
     </div>
 </div>
 
-<!-- JS Dependencies -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <!-- Leaflet Control Geocoder -->
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- Inject server-side URL base vào JS -->
+<script>
+    const uploadsUrl = '<?= defined("UPLOADS_URL") ? UPLOADS_URL : "../uploads" ?>';
+</script>
 
 <script>
     // HTTPS force removed
@@ -691,34 +990,54 @@
     };
     let activeMapLayer = mapLayers.light.addTo(map);
 
+    // Helper functions for custom markers
+    function getFeelingEmoji(feeling) {
+        const map = {
+            'Hạnh phúc': '😊',
+            'Tuyệt vời': '🤩',
+            'Bình yên': '🧘',
+            'Thú vị': '🎈',
+            'Nhớ nhung': '🥺'
+        };
+        return map[feeling] || '📍';
+    }
+
+    function createCustomMarkerHtml(loc, isFriend) {
+        const hasImage = !!loc.image;
+        const mainImg = hasImage ? `${uploadsUrl}/${loc.image}` : (loc.user_avatar ? `${uploadsUrl}/avatars/${loc.user_avatar}` : 'https://cdn-icons-png.flaticon.com/512/4140/4140044.png');
+        const emoji = getFeelingEmoji(loc.feeling);
+        const userAvatar = loc.user_avatar ? `${uploadsUrl}/avatars/${loc.user_avatar}` : 'https://cdn-icons-png.flaticon.com/512/4140/4140044.png';
+        const borderColor = isFriend ? '#6366f1' : '#22d3ee';
+        
+        return `
+            <div class="custom-map-marker" style="border: 3px solid ${borderColor};">
+                <img src="${mainImg}" class="custom-marker-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'" />
+                <div class="custom-marker-feeling-badge">${emoji}</div>
+                ${hasImage ? `<img src="${userAvatar}" class="custom-marker-user-badge" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'" />` : ''}
+                <div class="custom-marker-pulse" style="border-color: ${borderColor};"></div>
+            </div>
+        `;
+    }
+
     // Markers Data
     var savedLocations = <?php echo json_encode($locations); ?>;
     var friendLocations = <?php echo json_encode((!isset($is_friend_view) && isset($friend_locations)) ? $friend_locations : []); ?>;
     var markers = [];
     
     savedLocations.forEach(function(loc) {
-        // Tạo Icon bằng ảnh nổi bật
-        var photoIcon = L.divIcon({
-            className: 'photo-marker',
-            html: `
-                <div class="marker-container">
-                    ${loc.image ? 
-                        `<img src="../uploads/${loc.image}" class="marker-image">` : 
-                        `<div class="marker-image-empty"><i class="bi bi-geo-alt-fill"></i></div>`
-                    }
-                    <div class="marker-arrow"></div>
-                </div>
-            `,
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50]
+        var customIcon = L.divIcon({
+            className: 'photo-marker-wrapper',
+            html: createCustomMarkerHtml(loc, false),
+            iconSize: [48, 48],
+            iconAnchor: [24, 48],
+            popupAnchor: [0, -48]
         });
 
-        var marker = L.marker([loc.latitude, loc.longitude], { icon: photoIcon }).addTo(map);
+        var marker = L.marker([loc.latitude, loc.longitude], { icon: customIcon }).addTo(map);
         
         var popupContent = `
             <div class="p-2" style="width: 240px">
-                ${loc.image ? `<img src="../uploads/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer">` : ''}
+                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer">` : ''}
                 <h6 class="fw-bold mb-1">${loc.place_name}</h6>
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
@@ -739,19 +1058,11 @@
 
     friendLocations.forEach(function(loc) {
         var friendIcon = L.divIcon({
-            className: 'photo-marker',
-            html: `
-                <div class="marker-container" style="border-color:#bfdbfe;">
-                    ${loc.image ? 
-                        `<img src="../uploads/${loc.image}" class="marker-image">` : 
-                        `<div class="marker-image-empty"><i class="bi bi-people-fill"></i></div>`
-                    }
-                    <div class="marker-arrow"></div>
-                </div>
-            `,
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50]
+            className: 'photo-marker-wrapper',
+            html: createCustomMarkerHtml(loc, true),
+            iconSize: [48, 48],
+            iconAnchor: [24, 48],
+            popupAnchor: [0, -48]
         });
 
         var friendMarker = L.marker([loc.latitude, loc.longitude], { icon: friendIcon }).addTo(map);
@@ -766,7 +1077,7 @@
                         <div class="text-muted" style="font-size:11px;">@${loc.username || ''}</div>
                     </div>
                 </div>
-                ${loc.image ? `<img src="../uploads/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
+                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
                 <h6 class="fw-bold mb-1">${loc.place_name}</h6>
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
@@ -789,7 +1100,8 @@
 
     const journeyPoints = savedLocations
         .filter(loc => loc.latitude && loc.longitude)
-        .map(loc => [Number(loc.latitude), Number(loc.longitude)]);
+        .map(loc => [Number(loc.latitude), Number(loc.longitude)])
+        .reverse();
 
     let routeLine = null;
     if (journeyPoints.length > 1) {
@@ -799,6 +1111,20 @@
             opacity: 0.78,
             dashArray: '10 12'
         }).addTo(map);
+
+        // Marching ants animation loop using requestAnimationFrame
+        let offset = 0;
+        function animateMarchingAnts() {
+            offset = (offset - 1) % 22;
+            const el = routeLine.getElement();
+            if (el) {
+                el.style.strokeDashoffset = offset + 'px';
+            }
+            requestAnimationFrame(animateMarchingAnts);
+        }
+        setTimeout(() => {
+            requestAnimationFrame(animateMarchingAnts);
+        }, 500);
     }
 
     journeyPoints.forEach((point, index) => {
@@ -815,6 +1141,20 @@
         activeMapLayer = mapLayers[theme].addTo(map);
         document.getElementById('darkMapBtn').classList.toggle('active', theme === 'dark');
         document.getElementById('lightMapBtn').classList.toggle('active', theme === 'light');
+        
+        // Toggle Global UI Theme
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('uiTheme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('uiTheme', 'light');
+        }
+    }
+    
+    // Khôi phục theme UI khi tải trang
+    if (localStorage.getItem('uiTheme') === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
     }
 
     function fitJourneyRoute() {
@@ -836,18 +1176,11 @@
     let _lastRawLat = null, _lastRawLng = null;
     let _accuracyRetryTimer = null;
 
-    // Options chính: yêu cầu độ chính xác cao nhất
+    // Options chính: yêu cầu độ chính xác cao nhất tuyệt đối
     const geoOptions = {
         enableHighAccuracy: true,
-        maximumAge: 0,       // Không dùng cache cũ
-        timeout: 15000       // Giảm xuống 15s để retry nhanh hơn
-    };
-
-    // Options fallback: dùng khi thiết bị không có GPS tốt
-    const geoFallbackOptions = {
-        enableHighAccuracy: false,
-        maximumAge: 10000,
-        timeout: 10000
+        maximumAge: 0,       // KHÔNG BAO GIỜ dùng vị trí cache
+        timeout: 25000       // Chờ tối đa 25s để lấy GPS xịn nhất
     };
 
     const liveLocationIcon = L.divIcon({
@@ -1014,44 +1347,26 @@
     }
 
     function onLocationError(error) {
-        // Nếu timeout và chưa có fix nào, thử lại với fallback options
-        if (error.code === 3 && locationFixCount === 0) {
-            console.warn('GPS timeout, thử lại với chế độ fallback...');
-            navigator.geolocation.getCurrentPosition(
-                updateCurrentPosition,
-                (fallbackErr) => {
-                    const messages = {
-                        1: 'Cho phép truy cập vị trí (biểu tượng ổ khóa trên thanh địa chỉ).',
-                        2: 'Không xác định được GPS. Bật Location Services trên thiết bị.',
-                        3: 'Không lấy được GPS — hãy ra ngoài trời và bấm nút định vị lại.'
-                    };
-                    updateLocationStatus(
-                        `<i class="bi bi-exclamation-triangle-fill me-2"></i> <small>${messages[fallbackErr.code] || 'Lỗi định vị'}</small>`,
-                        'warning'
-                    );
-                    const hudText = document.getElementById('liveLocationHudText');
-                    if (hudText) hudText.textContent = messages[fallbackErr.code] || 'Lỗi định vị';
-                },
-                geoFallbackOptions
-            );
-            return;
-        }
-
         const messages = {
-            1: 'Cho phép truy cập vị trí (biểu tượng ổ khóa trên thanh địa chỉ).',
-            2: 'Không xác định được GPS. Bật Location Services trên thiết bị.',
-            3: 'GPS quá lâu — ra ngoài trời hoặc bấm nút định vị lại.'
+            1: 'Vui lòng cho phép truy cập vị trí (biểu tượng ổ khóa trên thanh địa chỉ).',
+            2: 'Không xác định được GPS. Hãy bật Vị trí (Location Services) trên thiết bị.',
+            3: 'Đang tìm tín hiệu GPS chính xác... Hãy ra ngoài trời nếu có thể.'
         };
         updateLocationStatus(
             `<i class="bi bi-exclamation-triangle-fill me-2"></i> <small>${messages[error.code] || 'Lỗi định vị'}</small>`,
             'warning'
         );
         const hudText = document.getElementById('liveLocationHudText');
-        if (hudText) hudText.textContent = messages[error.code] || 'Lỗi định vị';
+        if (hudText) hudText.textContent = messages[error.code] || 'Đang tìm tín hiệu GPS...';
     }
 
     function requestAccurateLocation() {
         if (!navigator.geolocation) return;
+        
+        updateLocationStatus('<i class="bi bi-geo-alt me-2"></i> <small>Đang lấy vị trí thực tế mới nhất...</small>', 'warning');
+        const hudText = document.getElementById('liveLocationHudText');
+        if (hudText) hudText.textContent = 'Đang định vị lại...';
+
         navigator.geolocation.getCurrentPosition(
             updateCurrentPosition,
             onLocationError,
@@ -1069,23 +1384,23 @@
         document.getElementById('liveLocationHud').style.display = 'block';
         document.getElementById('liveLocationHudText').textContent = 'Đang lấy GPS chính xác...';
 
-        // Lấy ngay 1 lần bằng getCurrentPosition (nhanh hơn watchPosition lần đầu)
+        // Lấy vị trí bằng getCurrentPosition trước để phản hồi nhanh
         requestAccurateLocation();
 
-        // watchPosition để liên tục cập nhật
+        // watchPosition để liên tục cập nhật theo thời gian thực
         locationWatchId = navigator.geolocation.watchPosition(
             updateCurrentPosition,
             onLocationError,
             geoOptions
         );
 
-        // Cứ 30 giây request thêm 1 lần để đảm bảo vị trí không bị stuck
+        // Retry nếu chưa lấy được GPS xịn sau 20 giây
         _accuracyRetryTimer = setInterval(() => {
-            if (!userManuallySetLocation && bestAccuracy > 80) {
+            if (!userManuallySetLocation && bestAccuracy > 100) {
                 console.log('Đang thử nâng cao độ chính xác GPS...');
                 requestAccurateLocation();
             }
-        }, 30000);
+        }, 20000);
     }
 
     function stopLiveLocationTracking() {
@@ -1204,7 +1519,7 @@
                             return `
                                 <div class="carousel-item ${index === 0 ? 'active' : ''}">
                                     <video controls class="d-block w-100 rounded-4" style="max-height: 70vh; background: #000;">
-                                        <source src="../uploads/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}">
+                                        <source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}">
                                         Trình duyệt của bạn không hỗ trợ xem video.
                                     </video>
                                 </div>
@@ -1212,7 +1527,7 @@
                         } else {
                             return `
                                 <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                                    <img src="../uploads/${item.image_path}" class="d-block w-100 rounded-4" style="max-height: 70vh; object-fit: contain;">
+                                    <img src="${uploadsUrl}/${item.image_path}" class="d-block w-100 rounded-4" style="max-height: 70vh; object-fit: contain;">
                                 </div>
                             `;
                         }
@@ -1221,8 +1536,9 @@
                         const ext = item.image_path.split('.').pop().toLowerCase();
                         const isVideo = videoExtensions.includes(ext);
                         const media = isVideo
-                            ? `<video muted><source src="../uploads/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}"></video>`
-                            : `<img src="../uploads/${item.image_path}" alt="Album item ${index + 1}">`;
+                            ? `<video muted><source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}"></video>`
+                            : `<img src="${uploadsUrl}/${item.image_path}" alt="Album item ${index + 1}">`;
+
                         return `<button class="album-thumb ${index === 0 ? 'active' : ''}" type="button" data-bs-target="#albumCarousel" data-bs-slide-to="${index}" onclick="setActiveAlbumThumb(${index})">${media}</button>`;
                     }).join('');
                 } else {
@@ -1308,10 +1624,11 @@
         document.getElementById('edit_feeling').value = loc.feeling;
         document.getElementById('edit_description').value = loc.description;
         document.getElementById('edit_privacy').value = loc.privacy || 'public';
+        document.getElementById('edit_trip_id').value = loc.trip_id || '';
         
         const currentImageDiv = document.getElementById('edit_current_image');
         if (loc.image) {
-            currentImageDiv.innerHTML = `<img src="../uploads/${loc.image}" class="img-fluid rounded-3" style="max-height: 100px;">`;
+            currentImageDiv.innerHTML = `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3" style="max-height: 100px;">`;
         } else {
             currentImageDiv.innerHTML = '';
         }
@@ -1724,6 +2041,14 @@
         }
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+        if (localStorage.getItem('activeTab')) {
+            switchTab(localStorage.getItem('activeTab'));
+            setActiveNav('nav-' + localStorage.getItem('activeTab'));
+            localStorage.removeItem('activeTab');
+        }
+    });
+
 </script>
 
 
@@ -1757,6 +2082,186 @@
     function scrollToMap() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         if (typeof map !== 'undefined') setTimeout(() => map.invalidateSize(), 400);
+    }
+
+    // --- TRIPS FUNCTIONALITY ---
+    function createNewTrip() {
+        var modal = new bootstrap.Modal(document.getElementById('createTripModal'));
+        modal.show();
+    }
+
+    document.querySelector('#createTripModal form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const oldText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang tạo...';
+
+        fetch('index.php?url=trip/create', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                localStorage.setItem('activeTab', 'trips');
+                window.location.reload();
+            } else {
+                alert("Lỗi: " + data.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = oldText;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Lỗi kết nối mạng!");
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = oldText;
+        });
+    }
+
+    function filterMapByTrip(tripId) {
+        window.location.href = 'index.php?url=location/dashboard&trip_id=' + tripId;
+    }
+
+    function openInviteModal(tripId) {
+        document.getElementById('invite_trip_id').value = tripId;
+        var modal = new bootstrap.Modal(document.getElementById('inviteTripModal'));
+        modal.show();
+    }
+
+    function sendTripInvite(username) {
+        const tripId = document.getElementById('invite_trip_id').value;
+        if (!username || !username.trim()) {
+            alert("Vui lòng nhập Username hợp lệ.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('trip_id', tripId);
+        formData.append('username', username.trim());
+
+        fetch('index.php?url=trip/addMember', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("Mời thành công!");
+                bootstrap.Modal.getInstance(document.getElementById('inviteTripModal')).hide();
+                // Optionally reload or visually indicate success
+            } else {
+                alert("Lỗi: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Đã xảy ra lỗi mạng.");
+        });
+    }
+
+    let searchTimeout;
+    function searchUsersForInvite(query) {
+        const resultsContainer = document.getElementById('invite_search_results');
+        if (!query || query.trim() === '') {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            fetch('index.php?url=friend/searchUsers&q=' + encodeURIComponent(query))
+            .then(res => res.json())
+            .then(data => {
+                resultsContainer.innerHTML = '';
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(user => {
+                        resultsContainer.innerHTML += `
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-2 py-1 bg-transparent border-0 mb-1 rounded" style="background-color: #f8f9fa!important;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-placeholder" style="width:24px;height:24px;font-size:10px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;">
+                                        ${user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold" style="font-size:12px;">${user.full_name}</div>
+                                        <div class="text-muted" style="font-size:10px;">@${user.username}</div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size:10px;" onclick="sendTripInvite('${user.username}')">
+                                    Mời
+                                </button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<div class="text-muted small px-2">Không tìm thấy ai.</div>';
+                }
+            })
+            .catch(err => console.error(err));
+        }, 300);
+    }
+
+    function toggleReactionMenu(btn) {
+        // Đóng tất cả các popup khác trước
+        document.querySelectorAll('.reaction-popup.show').forEach(p => {
+            if (p !== btn.nextElementSibling) p.classList.remove('show');
+        });
+        // Bật/tắt popup hiện tại
+        btn.nextElementSibling.classList.toggle('show');
+    }
+
+    // Đóng popup khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.reaction-container')) {
+            document.querySelectorAll('.reaction-popup.show').forEach(p => p.classList.remove('show'));
+        }
+    });
+
+    function toggleLike(locationId, type, btnElement) {
+        event.stopPropagation(); // Ngăn click lan ra memory-item
+        const formData = new FormData();
+        formData.append('location_id', locationId);
+        formData.append('reaction_type', type);
+
+        fetch('index.php?url=location/toggleLike', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const iconSpan = btnElement.querySelector('.r-icon');
+                const countSpan = btnElement.querySelector('.like-count');
+                let count = parseInt(countSpan.innerText);
+
+                let iconHtml = '<i class="bi bi-heart"></i>';
+                let color = '#64748b';
+                
+                if (data.action === 'liked') {
+                    count++;
+                } else if (data.action === 'unliked') {
+                    count = Math.max(0, count - 1);
+                }
+
+                if (data.action === 'liked' || data.action === 'updated') {
+                    if (data.type === 'like') { iconHtml = '👍'; color = '#3b5998'; }
+                    else if (data.type === 'heart') { iconHtml = '<i class="bi bi-heart-fill"></i>'; color = '#ef4444'; }
+                    else if (data.type === 'haha') { iconHtml = '😂'; color = '#f59e0b'; }
+                    else if (data.type === 'wow') { iconHtml = '😮'; color = '#f59e0b'; }
+                    else if (data.type === 'sad') { iconHtml = '😢'; color = '#f59e0b'; }
+                }
+
+                iconSpan.innerHTML = iconHtml;
+                btnElement.style.color = color;
+                countSpan.innerText = count;
+                btnElement.nextElementSibling.classList.remove('show');
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch(err => console.error(err));
     }
 </script>
 
@@ -1826,6 +2331,152 @@
             });
         }, 1000);
     }
+
+    // Lightbox Implementation
+    let lightboxMediaList = [];
+    let lightboxCurrentIndex = 0;
+
+    function initLightbox() {
+        const mediaSelectors = '.memory-img, .media-preview, .feed-image, .album-cell img, .album-cell video';
+        document.body.addEventListener('click', function(e) {
+            const target = e.target.closest(mediaSelectors);
+            if (!target) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const allMedia = Array.from(document.querySelectorAll(mediaSelectors));
+            lightboxMediaList = allMedia.map((el) => {
+                const isVid = el.tagName.toLowerCase() === 'video' || el.closest('.album-badge') || el.closest('.media-thumb--video');
+                let src = el.src;
+                if (el.tagName.toLowerCase() === 'video') {
+                    const source = el.querySelector('source');
+                    src = source ? source.src : el.src;
+                }
+                
+                let caption = "";
+                const card = el.closest('.memory-item, .album-item, .feed-card');
+                if (card) {
+                    const heading = card.querySelector('h6, .fw-bold');
+                    if (heading) caption = heading.innerText;
+                }
+                
+                return { src, isVid, caption };
+            });
+            
+            lightboxCurrentIndex = allMedia.indexOf(target);
+            if (lightboxCurrentIndex === -1) {
+                const targetSrc = target.tagName.toLowerCase() === 'video' ? (target.querySelector('source')?.src || target.src) : target.src;
+                lightboxCurrentIndex = lightboxMediaList.findIndex(m => m.src === targetSrc);
+            }
+            
+            showLightbox();
+        });
+    }
+
+    function showLightbox() {
+        let lightbox = document.getElementById('custom-lightbox');
+        if (!lightbox) {
+            lightbox = document.createElement('div');
+            lightbox.id = 'custom-lightbox';
+            lightbox.className = 'custom-lightbox';
+            lightbox.innerHTML = `
+                <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+                <span class="lightbox-arrow lightbox-arrow-left" onclick="prevLightboxImage()"><i class="bi bi-chevron-left"></i></span>
+                <span class="lightbox-arrow lightbox-arrow-right" onclick="nextLightboxImage()"><i class="bi bi-chevron-right"></i></span>
+                <div class="lightbox-content-wrapper">
+                    <img id="lightbox-img" src="" alt="" />
+                    <video id="lightbox-video" src="" controls style="display:none;"></video>
+                    <div class="lightbox-caption" id="lightbox-caption"></div>
+                </div>
+            `;
+            document.body.appendChild(lightbox);
+            
+            // Swipe gestures
+            let startX = 0;
+            lightbox.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
+            lightbox.addEventListener('touchend', e => {
+                const diffX = e.changedTouches[0].clientX - startX;
+                if (diffX > 50) prevLightboxImage();
+                else if (diffX < -50) nextLightboxImage();
+            }, {passive: true});
+            
+            lightbox.onclick = function(e) {
+                if (e.target === lightbox || e.target.classList.contains('lightbox-content-wrapper')) {
+                    closeLightbox();
+                }
+            };
+        }
+        
+        lightbox.style.display = 'flex';
+        lightbox.offsetHeight; // Force reflow
+        lightbox.classList.add('show');
+        
+        updateLightboxContent();
+        
+        document.onkeydown = function(e) {
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') prevLightboxImage();
+            else if (e.key === 'ArrowRight') nextLightboxImage();
+        };
+    }
+
+    function updateLightboxContent() {
+        const media = lightboxMediaList[lightboxCurrentIndex];
+        if (!media) return;
+        
+        const img = document.getElementById('lightbox-img');
+        const video = document.getElementById('lightbox-video');
+        const caption = document.getElementById('lightbox-caption');
+        
+        if (media.isVid) {
+            img.style.display = 'none';
+            video.style.display = 'block';
+            video.src = media.src;
+            video.play().catch(() => {});
+        } else {
+            video.style.display = 'none';
+            video.src = "";
+            img.style.display = 'block';
+            img.src = media.src;
+        }
+        
+        caption.innerText = media.caption || "";
+    }
+
+    function closeLightbox() {
+        const lightbox = document.getElementById('custom-lightbox');
+        if (!lightbox) return;
+        lightbox.classList.remove('show');
+        const video = document.getElementById('lightbox-video');
+        if (video) {
+            video.pause();
+            video.src = "";
+        }
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+        }, 300);
+        document.onkeydown = null;
+    }
+
+    function nextLightboxImage() {
+        if (lightboxMediaList.length <= 1) return;
+        const video = document.getElementById('lightbox-video');
+        if (video) video.pause();
+        lightboxCurrentIndex = (lightboxCurrentIndex + 1) % lightboxMediaList.length;
+        updateLightboxContent();
+    }
+
+    function prevLightboxImage() {
+        if (lightboxMediaList.length <= 1) return;
+        const video = document.getElementById('lightbox-video');
+        if (video) video.pause();
+        lightboxCurrentIndex = (lightboxCurrentIndex - 1 + lightboxMediaList.length) % lightboxMediaList.length;
+        updateLightboxContent();
+    }
+
+    // Initialize lightbox on load
+    document.addEventListener('DOMContentLoaded', initLightbox);
     </script>
     
 </body>

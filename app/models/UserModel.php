@@ -47,7 +47,7 @@ class UserModel {
 
     // Kiểm tra đăng nhập
     public function login($username, $password) {
-        $query = "SELECT id, full_name, username, password, role, is_locked 
+        $query = "SELECT id, full_name, username, password, role, is_locked, avatar 
                   FROM " . $this->table_name . " 
                   WHERE username = :username LIMIT 0,1";
         

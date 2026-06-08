@@ -19,6 +19,7 @@ class LocationModel {
     public $visit_date;
     public $privacy = 'public'; // 'public', 'friends', 'private'
     public $visible_friends; // JSON list of user IDs allowed to view
+    public $trip_id = null;
     public $touchCreatedAt = false;
 
     public function __construct($db) {
@@ -28,12 +29,13 @@ class LocationModel {
     // Lưu địa điểm mới
     public function create() {
         $query = "INSERT INTO " . $this->table_name . " 
-                (user_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, created_at) 
-                VALUES (:user_id, :place_name, :latitude, :longitude, :description, :feeling, :image, :visit_date, :privacy, :visible_friends, NOW())";
+                (user_id, trip_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, created_at) 
+                VALUES (:user_id, :trip_id, :place_name, :latitude, :longitude, :description, :feeling, :image, :visit_date, :privacy, :visible_friends, NOW())";
         
         $stmt = $this->conn->prepare($query);
 
         $stmt->bindParam(":user_id", $this->user_id);
+        $stmt->bindParam(":trip_id", $this->trip_id);
         $stmt->bindParam(":place_name", $this->place_name);
         $stmt->bindParam(":latitude", $this->latitude);
         $stmt->bindParam(":longitude", $this->longitude);
@@ -52,9 +54,34 @@ class LocationModel {
 
     // Lấy tất cả địa điểm của một user
     public function getAllByUserId($user_id) {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE user_id = :user_id ORDER BY visit_date DESC";
+        $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
+                         (SELECT reaction_type FROM likes WHERE location_id = l.id AND user_id = :uid LIMIT 1) as reaction_type
+                  FROM " . $this->table_name . " l
+                  JOIN users u ON l.user_id = u.id
+                  WHERE l.user_id = :user_id 
+                  ORDER BY l.visit_date DESC";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":user_id", $user_id);
+        $stmt->bindParam(":uid", $user_id);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy tất cả địa điểm thuộc một chuyến đi (Bao gồm của tất cả thành viên)
+    public function getAllByTripId($trip_id, $current_user_id) {
+        $query = "SELECT l.*, u.full_name, u.username, u.avatar as user_avatar,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
+                         (SELECT reaction_type FROM likes WHERE location_id = l.id AND user_id = :uid LIMIT 1) as reaction_type
+                  FROM " . $this->table_name . " l
+                  JOIN users u ON l.user_id = u.id
+                  WHERE l.trip_id = :trip_id 
+                  ORDER BY l.visit_date DESC, l.created_at DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(":trip_id", $trip_id);
+        $stmt->bindParam(":uid", $current_user_id);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -76,6 +103,7 @@ class LocationModel {
                     description = :description, 
                     feeling = :feeling, 
                     visit_date = :visit_date,
+                    trip_id = :trip_id,
                     privacy = :privacy,
                     visible_friends = :visible_friends";
         
@@ -96,6 +124,7 @@ class LocationModel {
         $stmt->bindParam(":description", $this->description);
         $stmt->bindParam(":feeling", $this->feeling);
         $stmt->bindParam(":visit_date", $this->visit_date);
+        $stmt->bindParam(":trip_id", $this->trip_id);
         $stmt->bindParam(":privacy", $this->privacy);
         $stmt->bindParam(":visible_friends", $this->visible_friends);
         $stmt->bindParam(":id", $this->id);
@@ -152,7 +181,10 @@ class LocationModel {
 
     // Lấy hành trình mới nhất từ bạn bè
     public function getFriendLocations($user_id) {
-        $query = "SELECT l.*, u.full_name, u.username 
+        $query = "SELECT l.*, u.full_name, u.username, u.avatar as user_avatar,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
+                         (SELECT reaction_type FROM likes WHERE location_id = l.id AND user_id = :uid LIMIT 1) as reaction_type
                   FROM locations l
                   JOIN users u ON l.user_id = u.id
                   JOIN friendships f ON (u.id = f.friend_id OR u.id = f.user_id)

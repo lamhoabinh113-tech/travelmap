@@ -57,7 +57,22 @@ class FriendController {
                     header("Location: index.php?url=location/dashboard&friend_error=exists");
                 }
                 exit();
-            }
+        }
+    }
+
+    // Tìm kiếm người dùng (AJAX)
+    public function searchUsers() {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_GET['q'])) {
+            $query = '%' . trim($_GET['q']) . '%';
+            $user_id = $_SESSION['user_id'];
+            
+            $sql = "SELECT username, full_name FROM users WHERE (username LIKE :q OR full_name LIKE :q) AND id != :uid LIMIT 10";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':q' => $query, ':uid' => $user_id]);
+            
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'data' => $users]);
+            exit();
         }
     }
 }

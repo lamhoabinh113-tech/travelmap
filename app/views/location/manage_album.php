@@ -4,25 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Album - <?php echo $location['place_name']; ?></title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.3">
+    
+    <script>
+        if (localStorage.getItem('uiTheme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+    
     <style>
-        body { background: #f8fafc; }
         .manage-container { max-width: 1000px; margin: 50px auto; padding: 20px; }
         .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
         .album-item { 
-            background: white; 
+            background: var(--surface); 
+            border: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border-radius: 20px; 
             overflow: hidden; 
-            border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            box-shadow: var(--neu-shadow-flat);
         }
-        .album-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-        .media-preview { width: 100%; height: 200px; object-fit: cover; background: #000; }
+        .album-item:hover { transform: translateY(-5px); box-shadow: var(--neu-shadow-hover); }
+        .media-preview { width: 100%; height: 200px; object-fit: cover; background: #000; cursor: pointer; }
         .item-actions { padding: 15px; display: flex; gap: 10px; justify-content: center; }
-        .btn-action { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: none; transition: all 0.2s; }
+        .btn-action { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: none; transition: all 0.25s; }
         .btn-delete { background: #fee2e2; color: #ef4444; }
         .btn-delete:hover { background: #ef4444; color: white; }
         .btn-featured { background: #f0f7ff; color: #3b82f6; }
@@ -41,7 +53,7 @@
         }
     </style>
 </head>
-<body>
+<body class="py-4">
 
 <div class="manage-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -106,6 +118,13 @@
         </div>
     <?php endif; ?>
 
+    <!-- Drag & Drop Area -->
+    <div id="dropzone" class="dropzone-area animate-fade-in">
+        <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
+        <h5 class="fw-bold mb-1">Kéo & Thả tập tin vào đây</h5>
+        <p class="text-muted small mb-0">Hoặc click để chọn ảnh / video từ máy tính của bạn</p>
+    </div>
+
     <div class="album-grid">
         <?php foreach($album as $item): 
             $ext = strtolower(pathinfo($item['image_path'], PATHINFO_EXTENSION));
@@ -118,26 +137,26 @@
 
                 <?php if($isVideo): ?>
                     <video class="media-preview">
-                        <source src="../uploads/<?php echo $item['image_path']; ?>" type="video/mp4">
+                        <source src="<?= UPLOADS_URL ?>/<?php echo $item['image_path']; ?>" type="video/mp4">
                     </video>
-                    <div class="position-absolute top-50 start-50 translate-middle text-white opacity-75">
+                    <div class="position-absolute top-50 start-50 translate-middle text-white opacity-75" style="pointer-events: none;">
                         <i class="bi bi-play-circle-fill display-6"></i>
                     </div>
                 <?php else: ?>
-                    <img src="../uploads/<?php echo $item['image_path']; ?>" class="media-preview">
+                    <img src="<?= UPLOADS_URL ?>/<?php echo $item['image_path']; ?>" class="media-preview">
                 <?php endif; ?>
 
                 <div class="item-actions">
                     <a href="index.php?url=location/setFeatured&id=<?php echo $item['id']; ?>&location_id=<?php echo $location['id']; ?>" 
                        class="btn-action btn-featured <?php echo $item['is_featured'] ? 'active' : ''; ?>" 
                        title="Đặt làm ảnh đại diện">
-                        <i class="bi bi-star-fill"></i>
+                       <i class="bi bi-star-fill"></i>
                     </a>
                     <a href="index.php?url=location/deleteAlbumImage&id=<?php echo $item['id']; ?>&location_id=<?php echo $location['id']; ?>" 
                        class="btn-action btn-delete" 
                        onclick="return confirm('Bạn có chắc muốn xóa tệp này?')"
                        title="Xóa khỏi album">
-                        <i class="bi bi-trash-fill"></i>
+                       <i class="bi bi-trash-fill"></i>
                     </a>
                 </div>
             </div>
@@ -160,7 +179,178 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         toggleSpecificFriends('album');
+
+        // Drag & drop file upload
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('addMoreInput');
+        const form = document.getElementById('addMoreForm');
+
+        if (dropzone && fileInput && form) {
+            dropzone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('drag-over');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    form.submit();
+                }
+            }, false);
+        }
     });
+
+    // Lightbox Implementation
+    let lightboxMediaList = [];
+    let lightboxCurrentIndex = 0;
+
+    function initLightbox() {
+        const mediaSelectors = '.media-preview';
+        document.body.addEventListener('click', function(e) {
+            const target = e.target.closest(mediaSelectors);
+            if (!target) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const allMedia = Array.from(document.querySelectorAll(mediaSelectors));
+            lightboxMediaList = allMedia.map((el) => {
+                const isVid = el.tagName.toLowerCase() === 'video' || el.closest('.media-thumb--video');
+                let src = el.src;
+                if (el.tagName.toLowerCase() === 'video') {
+                    const source = el.querySelector('source');
+                    src = source ? source.src : el.src;
+                }
+                
+                let caption = "Ảnh trong Album";
+                return { src, isVid, caption };
+            });
+            
+            lightboxCurrentIndex = allMedia.indexOf(target);
+            showLightbox();
+        });
+    }
+
+    function showLightbox() {
+        let lightbox = document.getElementById('custom-lightbox');
+        if (!lightbox) {
+            lightbox = document.createElement('div');
+            lightbox.id = 'custom-lightbox';
+            lightbox.className = 'custom-lightbox';
+            lightbox.innerHTML = `
+                <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+                <span class="lightbox-arrow lightbox-arrow-left" onclick="prevLightboxImage()"><i class="bi bi-chevron-left"></i></span>
+                <span class="lightbox-arrow lightbox-arrow-right" onclick="nextLightboxImage()"><i class="bi bi-chevron-right"></i></span>
+                <div class="lightbox-content-wrapper">
+                    <img id="lightbox-img" src="" alt="" />
+                    <video id="lightbox-video" src="" controls style="display:none;"></video>
+                    <div class="lightbox-caption" id="lightbox-caption"></div>
+                </div>
+            `;
+            document.body.appendChild(lightbox);
+            
+            // Swipe gestures
+            let startX = 0;
+            lightbox.addEventListener('touchstart', e => startX = e.touches[0].clientX, {passive: true});
+            lightbox.addEventListener('touchend', e => {
+                const diffX = e.changedTouches[0].clientX - startX;
+                if (diffX > 50) prevLightboxImage();
+                else if (diffX < -50) nextLightboxImage();
+            }, {passive: true});
+            
+            lightbox.onclick = function(e) {
+                if (e.target === lightbox || e.target.classList.contains('lightbox-content-wrapper')) {
+                    closeLightbox();
+                }
+            };
+        }
+        
+        lightbox.style.display = 'flex';
+        lightbox.offsetHeight; // Force reflow
+        lightbox.classList.add('show');
+        
+        updateLightboxContent();
+        
+        document.onkeydown = function(e) {
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') prevLightboxImage();
+            else if (e.key === 'ArrowRight') nextLightboxImage();
+        };
+    }
+
+    function updateLightboxContent() {
+        const media = lightboxMediaList[lightboxCurrentIndex];
+        if (!media) return;
+        
+        const img = document.getElementById('lightbox-img');
+        const video = document.getElementById('lightbox-video');
+        const caption = document.getElementById('lightbox-caption');
+        
+        if (media.isVid) {
+            img.style.display = 'none';
+            video.style.display = 'block';
+            video.src = media.src;
+            video.play().catch(() => {});
+        } else {
+            video.style.display = 'none';
+            video.src = "";
+            img.style.display = 'block';
+            img.src = media.src;
+        }
+        
+        caption.innerText = media.caption || "";
+    }
+
+    function closeLightbox() {
+        const lightbox = document.getElementById('custom-lightbox');
+        if (!lightbox) return;
+        lightbox.classList.remove('show');
+        const video = document.getElementById('lightbox-video');
+        if (video) {
+            video.pause();
+            video.src = "";
+        }
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+        }, 300);
+        document.onkeydown = null;
+    }
+
+    function nextLightboxImage() {
+        if (lightboxMediaList.length <= 1) return;
+        const video = document.getElementById('lightbox-video');
+        if (video) video.pause();
+        lightboxCurrentIndex = (lightboxCurrentIndex + 1) % lightboxMediaList.length;
+        updateLightboxContent();
+    }
+
+    function prevLightboxImage() {
+        if (lightboxMediaList.length <= 1) return;
+        const video = document.getElementById('lightbox-video');
+        if (video) video.pause();
+        lightboxCurrentIndex = (lightboxCurrentIndex - 1 + lightboxMediaList.length) % lightboxMediaList.length;
+        updateLightboxContent();
+    }
+
+    // Initialize lightbox on load
+    document.addEventListener('DOMContentLoaded', initLightbox);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

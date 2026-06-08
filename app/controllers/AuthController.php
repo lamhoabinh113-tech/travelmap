@@ -44,17 +44,22 @@ class AuthController {
 
     // Hiển thị trang đăng nhập
     public function login() {
-        if (isset($_SESSION['user_id'])) {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_SESSION['user_id'])) {
+            session_write_close();
             header("Location: index.php?url=location/dashboard");
             exit();
         }
 
         $error = "";
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $username = $_POST['username'];
-            $password = $_POST['password'];
+            // Hỗ trợ cả trường input name mới chống autofill (login_username/login_password) và name cũ
+            $username = $_POST['login_username'] ?? $_POST['username'] ?? '';
+            $password = $_POST['login_password'] ?? $_POST['password'] ?? '';
+
+            file_put_contents(__DIR__ . '/login_debug.txt', "POST Received: username='" . $username . "', password_len=" . strlen($password) . "\nPOST Raw: " . json_encode($_POST) . "\n", FILE_APPEND);
 
             $user = $this->userModel->login($username, $password);
+            
             if ($user) {
                 // Kiểm tra tài khoản bị khóa
                 if ($user['is_locked'] ?? 0) {
@@ -64,10 +69,14 @@ class AuthController {
                     $_SESSION['user_id']   = $user['id'];
                     $_SESSION['full_name'] = $user['full_name'];
                     $_SESSION['username']  = $user['username'];
+                    $_SESSION['avatar']    = !empty($user['avatar']) ? (UPLOADS_URL . '/avatars/' . $user['avatar']) : '';
 
                     // Ghi log đăng nhập thành công
                     $log_id = $this->writeLoginLog($user['id'], 'success');
                     $_SESSION['login_log_id'] = $log_id;
+
+                    // Ghi lại session và đóng trước khi redirect
+                    session_write_close();
 
                     // Chuyển hướng admin lên trang admin dashboard
                     if (in_array($user['role'] ?? 'user', ['admin', 'moderator'])) {
@@ -86,7 +95,8 @@ class AuthController {
 
     // Hiển thị trang đăng ký
     public function register() {
-        if (isset($_SESSION['user_id'])) {
+        if ($_SERVER['REQUEST_METHOD'] == 'GET' && isset($_SESSION['user_id'])) {
+            session_write_close();
             header("Location: index.php?url=location/dashboard");
             exit();
         }
@@ -133,9 +143,20 @@ class AuthController {
                 $stmt->execute([':id' => $_SESSION['login_log_id']]);
             } catch (Exception $e) {}
         }
+        
+        // Xóa sạch toàn bộ Session để tránh kẹt tài khoản
+        $_SESSION = array();
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
         session_destroy();
+        
+        session_write_close();
         header("Location: index.php?url=auth/login");
         exit();
     }
 }
-?>

@@ -1,0 +1,21 @@
+# Debug files
+*debug.txt
+*.log
+*.html
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# Uploaded assets (keep the folder structure but ignore content)
+uploads/*
+!uploads/.gitkeep
+uploads/avatars/*
+!uploads/avatars/.gitkeep
+
+# Database backups & local SQL dumps
+*.sql

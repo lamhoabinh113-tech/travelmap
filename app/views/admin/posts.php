@@ -43,7 +43,7 @@
                     <td style="color:var(--admin-muted); font-size:12px;">#<?= $p['id'] ?></td>
                     <td>
                         <?php if($p['image']): ?>
-                            <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" 
+                            <img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($p['image']) ?>" 
                                  style="width:44px; height:44px; object-fit:cover; border-radius:10px; border:2px solid var(--admin-border);"
                                  onerror="this.style.display='none'">
                         <?php else: ?>

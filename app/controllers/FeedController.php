@@ -75,7 +75,7 @@ class FeedController {
         ]);
         $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Với mỗi location, lấy tất cả ảnh trong album
+        // Với mỗi location, lấy tất cả ảnh trong album và các bình luận
         $feed_items = [];
         foreach ($locations as $loc) {
             $imgStmt = $this->db->prepare(
@@ -88,6 +88,17 @@ class FeedController {
             if (empty($loc['album_images']) && $loc['image']) {
                 $loc['album_images'] = [$loc['image']];
             }
+
+            // Lấy danh sách bình luận cho bài viết này
+            $commentStmt = $this->db->prepare(
+                "SELECT c.id, c.content, c.created_at, u.full_name, u.username, u.avatar 
+                 FROM comments c 
+                 JOIN users u ON c.user_id = u.id 
+                 WHERE c.location_id = :location_id 
+                 ORDER BY c.created_at ASC"
+            );
+            $commentStmt->execute([':location_id' => $loc['id']]);
+            $loc['comments'] = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 
             $feed_items[] = $loc;
         }
@@ -118,6 +129,27 @@ class FeedController {
             $stmt = $this->db->prepare($query);
             $stmt->execute([':uid' => $user_id, ':lid' => $location_id]);
             
+            // Gửi thông báo khi thích bài viết
+            if ($is_liked) {
+                $q_owner = "SELECT user_id FROM locations WHERE id = :lid LIMIT 1";
+                $s_owner = $this->db->prepare($q_owner);
+                $s_owner->execute([':lid' => $location_id]);
+                $owner_id = $s_owner->fetchColumn();
+
+                if ($owner_id && $owner_id != $user_id) {
+                    try {
+                        $q_noti = "INSERT INTO notifications (user_id, sender_id, type, reference_id, is_read, created_at) 
+                                   VALUES (:user_id, :sender_id, 'like', :ref, 0, NOW())";
+                        $s_noti = $this->db->prepare($q_noti);
+                        $s_noti->execute([
+                            ':user_id'   => $owner_id,
+                            ':sender_id' => $user_id,
+                            ':ref'       => $location_id
+                        ]);
+                    } catch (Exception $e) {}
+                }
+            }
+
             // Lấy lại số lượng like mới
             $count_query = "SELECT COUNT(*) FROM likes WHERE location_id = :lid";
             $stmt_count = $this->db->prepare($count_query);
@@ -231,6 +263,139 @@ class FeedController {
         $messages = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         echo json_encode(['success' => true, 'messages' => $messages]);
+        exit();
+    }
+
+    // Gửi bình luận mới cho bài viết (AJAX)
+    public function addComment() {
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Phương thức không hợp lệ']);
+            exit();
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : 0;
+        $content = isset($_POST['content']) ? trim($_POST['content']) : '';
+
+        if ($location_id <= 0 || $content === '') {
+            echo json_encode(['success' => false, 'message' => 'Nội dung bình luận không được trống']);
+            exit();
+        }
+
+        // Lưu bình luận
+        $query = "INSERT INTO comments (location_id, user_id, content, created_at) VALUES (:lid, :uid, :content, NOW())";
+        $stmt = $this->db->prepare($query);
+        $ok = $stmt->execute([
+            ':lid'      => $location_id,
+            ':uid'      => $user_id,
+            ':content'  => $content
+        ]);
+
+        if ($ok) {
+            $comment_id = $this->db->lastInsertId();
+
+            // Tạo thông báo cho chủ sở hữu bài viết (nếu người bình luận khác chủ bài viết)
+            $q_owner = "SELECT user_id FROM locations WHERE id = :lid LIMIT 1";
+            $s_owner = $this->db->prepare($q_owner);
+            $s_owner->execute([':lid' => $location_id]);
+            $owner_id = $s_owner->fetchColumn();
+
+            if ($owner_id && $owner_id != $user_id) {
+                try {
+                    $q_noti = "INSERT INTO notifications (user_id, sender_id, type, reference_id, is_read, created_at) 
+                               VALUES (:user_id, :sender_id, 'comment', :ref, 0, NOW())";
+                    $s_noti = $this->db->prepare($q_noti);
+                    $s_noti->execute([
+                        ':user_id'   => $owner_id,
+                        ':sender_id' => $user_id,
+                        ':ref'       => $location_id
+                    ]);
+                } catch (Exception $e) {}
+            }
+
+            echo json_encode([
+                'success' => true,
+                'comment' => [
+                    'id'         => $comment_id,
+                    'content'    => htmlspecialchars($content),
+                    'created_at' => date('H:i d/m/Y'),
+                    'full_name'  => $_SESSION['full_name'],
+                    'username'   => $_SESSION['username'],
+                    'avatar'     => !empty($_SESSION['avatar']) ? $_SESSION['avatar'] : ''
+                ]
+            ]);
+            exit();
+        }
+
+        echo json_encode(['success' => false, 'message' => 'Lỗi khi lưu bình luận']);
+        exit();
+    }
+
+    // Lấy danh sách thông báo và số lượng chưa đọc (AJAX)
+    public function getNotifications() {
+        header('Content-Type: application/json; charset=utf-8');
+        $user_id = $_SESSION['user_id'];
+
+        // Lấy số lượng chưa đọc
+        $q_count = "SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = 0";
+        $s_count = $this->db->prepare($q_count);
+        $s_count->execute([':uid' => $user_id]);
+        $unread_count = $s_count->fetchColumn();
+
+        // Lấy danh sách 10 thông báo mới nhất
+        $q_list = "SELECT n.id, n.type, n.reference_id, n.is_read, n.created_at, u.full_name, u.username, u.avatar 
+                   FROM notifications n 
+                   JOIN users u ON n.sender_id = u.id 
+                   WHERE n.user_id = :uid 
+                   ORDER BY n.created_at DESC 
+                   LIMIT 10";
+        $s_list = $this->db->prepare($q_list);
+        $s_list->execute([':uid' => $user_id]);
+        $notifications = $s_list->fetchAll(PDO::FETCH_ASSOC);
+
+        $formatted = [];
+        foreach ($notifications as $noti) {
+            $msg = '';
+            if ($noti['type'] === 'like') {
+                $msg = "đã thích một địa điểm hành trình của bạn.";
+            } elseif ($noti['type'] === 'comment') {
+                $msg = "đã bình luận về bài viết của bạn.";
+            } elseif ($noti['type'] === 'invite') {
+                $msg = "đã mời bạn tham gia một chuyến đi mới.";
+            }
+
+            $formatted[] = [
+                'id'           => $noti['id'],
+                'type'         => $noti['type'],
+                'reference_id' => $noti['reference_id'],
+                'is_read'      => $noti['is_read'],
+                'created_at'   => date('H:i d/m/Y', strtotime($noti['created_at'])),
+                'message'      => $msg,
+                'full_name'    => $noti['full_name'],
+                'username'     => $noti['username'],
+                'avatar'       => $noti['avatar'] ? (UPLOADS_URL . '/avatars/' . $noti['avatar']) : ''
+            ];
+        }
+
+        echo json_encode([
+            'success'      => true,
+            'unread_count' => intval($unread_count),
+            'list'         => $formatted
+        ]);
+        exit();
+    }
+
+    // Đánh dấu tất cả thông báo là đã đọc (AJAX)
+    public function markNotificationsRead() {
+        header('Content-Type: application/json; charset=utf-8');
+        $user_id = $_SESSION['user_id'];
+
+        $query = "UPDATE notifications SET is_read = 1 WHERE user_id = :uid";
+        $stmt = $this->db->prepare($query);
+        $ok = $stmt->execute([':uid' => $user_id]);
+
+        echo json_encode(['success' => $ok]);
         exit();
     }
 }

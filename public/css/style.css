@@ -423,3 +423,247 @@ body {
     }
     .reveal { opacity: 1; transform: none; }
 }
+
+/* ============================================================
+   MEDIA THUMB — Component ảnh/video nhất quán toàn app
+   ============================================================ */
+.media-thumb {
+    position: relative;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.media-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.media-thumb:hover img {
+    transform: scale(1.04);
+}
+
+.media-thumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Empty state (không có ảnh) */
+.media-thumb--empty {
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    color: #94a3b8;
+    font-size: 2rem;
+}
+
+/* Video overlay icon */
+.media-thumb--video .media-play-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    color: white;
+    font-size: 2.5rem;
+    transition: background 0.3s ease;
+    pointer-events: none;
+}
+
+.media-thumb--video:hover .media-play-icon {
+    background: rgba(0,0,0,0.5);
+}
+
+/* ============================================================
+   CUSTOM MAP MARKERS
+   ============================================================ */
+.custom-map-marker {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.custom-map-marker:hover {
+    transform: scale(1.2) translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+}
+.custom-marker-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.custom-marker-feeling-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.custom-marker-user-badge {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid white;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.custom-marker-pulse {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--primary, #6366f1);
+    opacity: 0;
+    pointer-events: none;
+    animation: customMarkerPulse 2.5s infinite;
+}
+@keyframes customMarkerPulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ============================================================
+   CUSTOM LIGHTBOX
+   ============================================================ */
+.custom-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 24, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.custom-lightbox.show {
+    opacity: 1;
+}
+.lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 44px;
+    cursor: pointer;
+    z-index: 100000;
+    transition: all 0.2s;
+    line-height: 1;
+}
+.lightbox-close:hover {
+    color: white;
+    transform: scale(1.15) rotate(90deg);
+}
+.lightbox-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 100000;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+.lightbox-arrow:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.24);
+    transform: translateY(-50%) scale(1.1);
+}
+.lightbox-arrow-left { left: 24px; }
+.lightbox-arrow-right { right: 24px; }
+.lightbox-content-wrapper {
+    max-width: 85%;
+    max-height: 85%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.lightbox-content-wrapper img, .lightbox-content-wrapper video {
+    max-width: 100%;
+    max-height: 75vh;
+    border-radius: 16px;
+    object-fit: contain;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+    transform: scale(0.94);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.custom-lightbox.show img, .custom-lightbox.show video {
+    transform: scale(1);
+}
+.lightbox-caption {
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 20px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 18px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+/* ============================================================
+   DRAG AND DROP DROPZONE
+   ============================================================ */
+.dropzone-area {
+    border: 2px dashed rgba(99, 102, 241, 0.35);
+    background: rgba(99, 102, 241, 0.03);
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-bottom: 24px;
+}
+.dropzone-area:hover, .dropzone-area.drag-over {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.08);
+    transform: translateY(-2px);
+}
+.dropzone-icon {
+    font-size: 32px;
+    color: var(--primary, #6366f1);
+    margin-bottom: 12px;
+}
+

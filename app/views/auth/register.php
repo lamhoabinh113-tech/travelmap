@@ -14,18 +14,25 @@
     <link rel="stylesheet" href="css/style.css">
     <style>
         body {
-            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
             min-height: 100vh;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+            background-attachment: fixed;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            font-family: 'Outfit', sans-serif;
         }
         .register-card {
             width: 100%;
-            max-width: 500px;
-            padding: 40px;
-            border-radius: 30px;
+            max-width: 480px;
+            padding: 40px 30px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 32px;
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
             animation: fadeIn 0.8s ease;
         }
     </style>
@@ -66,7 +73,7 @@
                     <input type="password" name="password" class="form-control form-control-premium" placeholder="********" required>
                 </div>
 
-                <button type="submit" class="btn btn-premium w-100 py-3 mb-3" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <button type="submit" class="btn btn-premium w-100 py-3 mb-3" style="background: linear-gradient(135deg, #6366f1, #0ea5e9); border: none;">
                     Tạo Tài Khoản <i class="bi bi-person-plus-fill ms-2"></i>
                 </button>
                 

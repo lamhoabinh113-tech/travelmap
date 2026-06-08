@@ -15,6 +15,7 @@ class LocationController {
             header("Location: index.php?url=auth/login");
             exit();
         }
+        file_put_contents(__DIR__ . '/dashboard_debug.txt', "Dashboard Access: user_id=" . $_SESSION['user_id'] . ", full_name=" . $_SESSION['full_name'] . "\n", FILE_APPEND);
         $database = new Database();
         $this->db = $database->getConnection();
         $this->locationModel = new LocationModel($this->db);
@@ -27,7 +28,20 @@ class LocationController {
 
     public function dashboard() {
         $user_id = $_SESSION['user_id'];
-        $locations = $this->locationModel->getAllByUserId($user_id);
+        $current_trip = null;
+        if (isset($_GET['trip_id']) && is_numeric($_GET['trip_id'])) {
+            $trip_id = $_GET['trip_id'];
+            $locations = $this->locationModel->getAllByTripId($trip_id, $user_id);
+            
+            require_once '../app/models/TripModel.php';
+            $tm = new TripModel($this->db);
+            $tripsList = $tm->getByUser($user_id);
+            foreach($tripsList as $t) {
+                if ($t['id'] == $trip_id) { $current_trip = $t; break; }
+            }
+        } else {
+            $locations = $this->locationModel->getAllByUserId($user_id);
+        }
         
         // Lấy danh sách bạn bè
         $query = "SELECT u.id, u.full_name, u.username FROM users u 
@@ -40,6 +54,22 @@ class LocationController {
         // Lấy hành trình của bạn bè để hiển thị ở sidebar
         $friend_locations = $this->locationModel->getFriendLocations($user_id);
 
+        require_once '../app/models/TripModel.php';
+        $tripModel = new TripModel($this->db);
+        $trips = $tripModel->getByUser($user_id);
+
+        // Lấy thông tin XP và Danh hiệu
+        $q_user = "SELECT xp FROM users WHERE id = :uid";
+        $s_user = $this->db->prepare($q_user);
+        $s_user->execute([':uid' => $user_id]);
+        $user_data = $s_user->fetch(PDO::FETCH_ASSOC);
+        $user_xp = $user_data['xp'] ?? 0;
+        
+        $badge_name = "Explorer Lv.1";
+        if ($user_xp >= 1000) $badge_name = "👑 Thánh Check-in";
+        elseif ($user_xp >= 500) $badge_name = "🗺️ Kẻ lang thang";
+        elseif ($user_xp >= 100) $badge_name = "🎒 Tân binh xê dịch";
+
         require_once '../app/views/location/dashboard.php';
     }
 
@@ -50,6 +80,22 @@ class LocationController {
             echo json_encode($album);
             exit();
         }
+    }
+
+    // Hiển thị thống kê
+    public function stats() {
+        $user_id = $_SESSION['user_id'];
+        if (isset($_GET['trip_id']) && is_numeric($_GET['trip_id'])) {
+            $trip_id = $_GET['trip_id'];
+            $locations = $this->locationModel->getAllByTripId($trip_id, $user_id);
+        } else {
+            $locations = $this->locationModel->getAllByUserId($user_id);
+        }
+        require_once '../app/models/TripModel.php';
+        $tripModel = new TripModel($this->db);
+        $trips = $tripModel->getByUser($user_id);
+        
+        require_once '../app/views/location/stats.php';
     }
 
     // Upload ảnh đại diện người dùng
@@ -85,8 +131,21 @@ class LocationController {
                 exit();
             }
 
+            // Cập nhật đường dẫn avatar vào cơ sở dữ liệu để lưu trữ vĩnh viễn
+            try {
+                $stmt = $this->db->prepare("UPDATE users SET avatar = :avatar WHERE id = :id");
+                $stmt->execute([
+                    ':avatar' => $safeName,
+                    ':id'     => $_SESSION['user_id']
+                ]);
+            } catch (Exception $e) {
+                // Bỏ qua hoặc log lỗi nếu có
+            }
+
             // Lưu đường dẫn avatar vào session để hiển thị ngay
-            $_SESSION['avatar'] = '../uploads/avatars/' . $safeName;
+            $_SESSION['avatar'] = UPLOADS_URL . '/avatars/' . $safeName;
+            
+            session_write_close();
             header('Location: index.php?url=location/dashboard&avatar_success=1');
             exit();
         }
@@ -206,6 +265,7 @@ class LocationController {
             $this->locationModel->feeling = $_POST['feeling'];
             $this->locationModel->visit_date = $_POST['visit_date'];
             $this->locationModel->privacy = isset($_POST['privacy']) ? $_POST['privacy'] : 'public';
+            $this->locationModel->trip_id = !empty($_POST['trip_id']) ? intval($_POST['trip_id']) : null;
             
             $visible_friends = null;
             if ($this->locationModel->privacy === 'specific_friends' && isset($_POST['visible_friends'])) {
@@ -244,11 +304,12 @@ class LocationController {
             $conn->beginTransaction();
 
             try {
-                $query = "INSERT INTO locations (user_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, created_at) 
-                          VALUES (:user_id, :place_name, :latitude, :longitude, :description, :feeling, :image, :visit_date, :privacy, :visible_friends, NOW())";
+                $query = "INSERT INTO locations (user_id, trip_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, created_at) 
+                          VALUES (:user_id, :trip_id, :place_name, :latitude, :longitude, :description, :feeling, :image, :visit_date, :privacy, :visible_friends, NOW())";
                 $stmt = $conn->prepare($query);
                 $stmt->execute([
                     ':user_id' => $this->locationModel->user_id,
+                    ':trip_id' => $this->locationModel->trip_id,
                     ':place_name' => $this->locationModel->place_name,
                     ':latitude' => $this->locationModel->latitude,
                     ':longitude' => $this->locationModel->longitude,
@@ -261,6 +322,11 @@ class LocationController {
                 ]);
 
                 $location_id = $conn->lastInsertId();
+
+                // Cập nhật XP (+20 XP)
+                $xp_query = "UPDATE users SET xp = xp + 20 WHERE id = :user_id";
+                $xp_stmt = $conn->prepare($xp_query);
+                $xp_stmt->execute([':user_id' => $this->locationModel->user_id]);
 
                 // Lưu vào bảng album
                 foreach ($uploaded_images as $idx => $img) {
@@ -293,6 +359,7 @@ class LocationController {
             $this->locationModel->feeling = $_POST['feeling'];
             $this->locationModel->visit_date = $_POST['visit_date'];
             $this->locationModel->privacy = isset($_POST['privacy']) ? $_POST['privacy'] : 'public';
+            $this->locationModel->trip_id = !empty($_POST['trip_id']) ? intval($_POST['trip_id']) : null;
             
             $visible_friends = null;
             if ($this->locationModel->privacy === 'specific_friends' && isset($_POST['visible_friends'])) {
@@ -439,6 +506,11 @@ class LocationController {
             $s_img = $this->db->prepare($q_img);
             $s_img->execute([':loc_id' => $location_id, ':path' => $file_name]);
 
+            // Cập nhật XP (+20 XP)
+            $xp_query = "UPDATE users SET xp = xp + 20 WHERE id = :user_id";
+            $xp_stmt = $this->db->prepare($xp_query);
+            $xp_stmt->execute([':user_id' => $user_id]);
+
             $this->db->commit();
 
             echo json_encode([
@@ -580,6 +652,49 @@ class LocationController {
                 require_once '../app/views/location/dashboard.php';
             } else {
                 header("Location: index.php?url=location/dashboard&error=not_friend");
+            }
+            exit();
+        }
+    }
+    // Toggle Like cho kỷ niệm (AJAX)
+    public function toggleLike() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $location_id = $_POST['location_id'] ?? 0;
+            $user_id = $_SESSION['user_id'];
+
+            if ($location_id == 0) {
+                echo json_encode(['success' => false, 'message' => 'Lỗi dữ liệu']);
+                exit();
+            }
+
+            $reaction_type = $_POST['reaction_type'] ?? 'heart';
+
+            // Kiểm tra xem đã like chưa
+            $q_check = "SELECT id, reaction_type FROM likes WHERE location_id = :lid AND user_id = :uid";
+            $s_check = $this->db->prepare($q_check);
+            $s_check->execute([':lid' => $location_id, ':uid' => $user_id]);
+            $existing = $s_check->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                if ($existing['reaction_type'] === $reaction_type) {
+                    // Cùng loại -> Unlike
+                    $q_del = "DELETE FROM likes WHERE id = :id";
+                    $s_del = $this->db->prepare($q_del);
+                    $s_del->execute([':id' => $existing['id']]);
+                    echo json_encode(['success' => true, 'action' => 'unliked', 'type' => null]);
+                } else {
+                    // Đổi loại
+                    $q_upd = "UPDATE likes SET reaction_type = :rtype WHERE id = :id";
+                    $s_upd = $this->db->prepare($q_upd);
+                    $s_upd->execute([':rtype' => $reaction_type, ':id' => $existing['id']]);
+                    echo json_encode(['success' => true, 'action' => 'updated', 'type' => $reaction_type]);
+                }
+            } else {
+                // Chưa like -> Like
+                $q_ins = "INSERT INTO likes (location_id, user_id, reaction_type) VALUES (:lid, :uid, :rtype)";
+                $s_ins = $this->db->prepare($q_ins);
+                $s_ins->execute([':lid' => $location_id, ':uid' => $user_id, ':rtype' => $reaction_type]);
+                echo json_encode(['success' => true, 'action' => 'liked', 'type' => $reaction_type]);
             }
             exit();
         }

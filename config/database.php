@@ -2,23 +2,33 @@
 /**
  * Database Configuration
  * Quản lý kết nối MySQL sử dụng PDO
+ * 
+ * ===== XAMPP LOCAL =====
+ * Đang kết nối tới MySQL local (XAMPP)
+ * Để deploy lên host: đổi lại host, db_name, username, password
  */
 
 class Database {
-    private $host = "sql207.infinityfree.com";
-    private $db_name = "if0_41993995_travel_memory_map";
-    private $username = "if0_41993995";
-    private $password = "hoabinh2004";
-    public $conn;
+    private $host     = "localhost";
+    private $db_name  = "travel_memory_map";
+    private $username = "root";
+    private $password = "";          // XAMPP mặc định không có password
+    public  $conn;
 
     public function getConnection() {
         $this->conn = null;
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-            $this->conn->exec("set names utf8mb4");
+            $this->conn = new PDO(
+                "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8mb4",
+                $this->username,
+                $this->password
+            );
+            $this->conn->exec("SET NAMES utf8mb4");
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch(PDOException $exception) {
-            echo "Kết nối database thất bại: " . $exception->getMessage();
+            // Hiển thị lỗi chi tiết khi đang develop local
+            die("❌ Kết nối database thất bại: " . $exception->getMessage());
         }
         return $this->conn;
     }

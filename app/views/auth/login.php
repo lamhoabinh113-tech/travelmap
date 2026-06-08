@@ -10,11 +10,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary: #4f46e5;
+            --primary: #6366f1;
             --secondary: #0ea5e9;
-            --surface: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
+            --surface: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.12);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
         }
         
         * {
@@ -26,30 +27,36 @@
         }
 
         body {
-            background-color: #e2e8f0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+            background-attachment: fixed;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            padding: 20px;
         }
 
         .app-container {
             width: 100%;
-            max-width: 414px; /* Mobile width */
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            min-height: 100vh;
+            max-width: 420px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 32px;
             position: relative;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            box-shadow: 0 30px 70px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            padding: 40px 24px;
         }
 
         .login-header {
-            padding: 60px 30px 30px;
             text-align: center;
             position: relative;
             z-index: 10;
+            margin-bottom: 30px;
         }
 
         /* Decorative background blobs */
@@ -61,8 +68,8 @@
             height: 200px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             border-radius: 50%;
-            filter: blur(40px);
-            opacity: 0.3;
+            filter: blur(50px);
+            opacity: 0.35;
             z-index: 1;
         }
         
@@ -74,8 +81,8 @@
             height: 250px;
             background: linear-gradient(135deg, #f43f5e, #fb923c);
             border-radius: 50%;
-            filter: blur(50px);
-            opacity: 0.2;
+            filter: blur(60px);
+            opacity: 0.25;
             z-index: 1;
         }
 
@@ -89,33 +96,32 @@
             align-items: center;
             justify-content: center;
             font-size: 36px;
-            margin: 0 auto 24px;
-            box-shadow: 0 15px 30px rgba(79, 70, 229, 0.3);
+            margin: 0 auto 20px;
+            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4);
             transform: rotate(-10deg);
             animation: float 6s ease-in-out infinite;
         }
         
         @keyframes float {
             0%, 100% { transform: translateY(0) rotate(-10deg); }
-            50% { transform: translateY(-10px) rotate(-5deg); }
+            50% { transform: translateY(-8px) rotate(-5deg); }
         }
 
         .title {
             font-family: 'Outfit', sans-serif;
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 700;
             color: var(--text-main);
             margin-bottom: 8px;
+            letter-spacing: -0.5px;
         }
 
         .subtitle {
             font-size: 14px;
             color: var(--text-muted);
-            margin-bottom: 40px;
         }
 
         .login-form {
-            padding: 0 30px;
             position: relative;
             z-index: 10;
             flex: 1;
@@ -128,12 +134,12 @@
 
         .input-group label {
             display: block;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             color: var(--text-muted);
             margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
         }
 
         .input-wrapper {
@@ -153,8 +159,8 @@
             width: 100%;
             padding: 16px 16px 16px 45px;
             border-radius: 16px;
-            border: 2px solid transparent;
-            background: #f1f5f9;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.05);
             font-size: 15px;
             color: var(--text-main);
             transition: all 0.3s ease;
@@ -162,9 +168,9 @@
         }
 
         .input-field:focus {
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
 
         .btn-login {
@@ -175,10 +181,10 @@
             color: white;
             border: none;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
-            transition: all 0.3s ease;
+            box-shadow: 0 10px 24px rgba(99, 102, 241, 0.35);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -188,7 +194,7 @@
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 25px rgba(79, 70, 229, 0.35);
+            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.45);
         }
         
         .btn-login:active {
@@ -198,7 +204,6 @@
         .footer-links {
             text-align: center;
             margin-top: 30px;
-            padding-bottom: 30px;
         }
 
         .footer-links p {
@@ -207,14 +212,18 @@
         }
 
         .footer-links a {
-            color: var(--primary);
+            color: var(--secondary);
             font-weight: 600;
             text-decoration: none;
+            transition: color 0.2s;
+        }
+        .footer-links a:hover {
+            color: var(--primary);
         }
 
         .alert-error {
-            background: #fee2e2;
-            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
             padding: 12px 16px;
             border-radius: 12px;
             font-size: 13px;
@@ -223,7 +232,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid #fecaca;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
     </style>
 </head>
@@ -249,12 +258,12 @@
                 </div>
             <?php endif; ?>
 
-            <form action="index.php?url=auth/login" method="POST">
+            <form action="index.php?url=auth/login" method="POST" autocomplete="off" id="loginForm">
                 <div class="input-group">
                     <label>Tên đăng nhập</label>
                     <div class="input-wrapper">
                         <i class="bi bi-person"></i>
-                        <input type="text" name="username" class="input-field" placeholder="Nhập username của bạn" required>
+                        <input type="text" name="login_username" id="username_field" class="input-field" placeholder="Nhập username của bạn" required autocomplete="username">
                     </div>
                 </div>
 
@@ -262,7 +271,7 @@
                     <label>Mật khẩu</label>
                     <div class="input-wrapper">
                         <i class="bi bi-lock"></i>
-                        <input type="password" name="password" class="input-field" placeholder="••••••••" required>
+                        <input type="password" name="login_password" id="password_field" class="input-field" placeholder="••••••••" required autocomplete="current-password">
                     </div>
                 </div>
 
@@ -273,10 +282,9 @@
 
             <div class="footer-links">
                 <p>Chưa có tài khoản? <a href="index.php?url=auth/register">Đăng ký ngay</a></p>
-                <p style="margin-top: 15px;"><a href="#" style="color:var(--text-muted); font-size:12px;"><i class="bi bi-shield-lock"></i> Đăng nhập Admin</a></p>
+                <p style="margin-top: 15px;"><a href="index.php?url=auth/login" style="color:var(--text-muted); font-size:12px;"><i class="bi bi-shield-lock"></i> Làm mới trang</a></p>
             </div>
         </div>
     </div>
-
 </body>
 </html>
