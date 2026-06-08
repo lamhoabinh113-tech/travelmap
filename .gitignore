@@ -22,3 +22,6 @@ uploads/avatars/*
 
 # Local automation scripts
 watch.ps1
+
+# Private configs
+config/db_config.php
