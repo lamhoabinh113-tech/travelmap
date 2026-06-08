@@ -16,9 +16,19 @@
     <!-- PWA Support -->
     <link rel="manifest" href="manifest.json">
     <script>
+        // Disable and clear service workers/caches to prevent frozen pages and layout bugs
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(function() {
-                console.log('Service Worker Registered');
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
             });
         }
     </script>
