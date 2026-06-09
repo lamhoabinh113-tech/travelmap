@@ -1335,6 +1335,7 @@
                     </a>
                 </div>
                 <div class="album-toolbar ms-auto me-3">
+                    <button type="button" id="albumDeletePhotoBtn" onclick="deleteCurrentAlbumPhoto()" title="Xóa ảnh này" class="text-danger me-2" style="display: none; background: none; border: none;"><i class="bi bi-trash3-fill" style="font-size: 16px;"></i></button>
                     <button type="button" onclick="toggleAlbumSlideshow()" title="Auto slideshow"><i class="bi bi-play-fill" id="albumPlayIcon"></i></button>
                     <button type="button" onclick="openFullscreenAlbum()" title="Fullscreen"><i class="bi bi-arrows-fullscreen"></i></button>
                 </div>
@@ -2256,14 +2257,16 @@
         const thumbsContainer = document.getElementById('albumThumbs');
         itemsContainer.innerHTML = '<div class="text-white py-5"><div class="spinner-border text-primary"></div></div>';
         thumbsContainer.innerHTML = '';
-        
-        // Cập nhật link quản lý (chỉ hiện nếu là của mình)
+        // Cập nhật link quản lý và nút xóa ảnh (chỉ hiện nếu là của mình)
         const manageLink = document.getElementById('manageAlbumLink');
+        const deletePhotoBtn = document.getElementById('albumDeletePhotoBtn');
         <?php if(isset($is_friend_view) && $is_friend_view): ?>
             manageLink.style.display = 'none';
+            if (deletePhotoBtn) deletePhotoBtn.style.display = 'none';
         <?php else: ?>
             manageLink.style.display = 'inline-block';
             manageLink.href = `index.php?url=location/manageAlbum&id=${id}`;
+            if (deletePhotoBtn) deletePhotoBtn.style.display = 'inline-block';
         <?php endif; ?>
 
         var albumModal = new bootstrap.Modal(document.getElementById('albumModal'));
@@ -2281,7 +2284,7 @@
                         
                         if (isVideo) {
                             return `
-                                <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                                <div class="carousel-item ${index === 0 ? 'active' : ''}" data-image-id="${item.id}">
                                     <video controls class="d-block w-100 rounded-4" style="max-height: 70vh; background: #000;">
                                         <source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}">
                                         Trình duyệt của bạn không hỗ trợ xem video.
@@ -2290,7 +2293,7 @@
                             `;
                         } else {
                             return `
-                                <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                                <div class="carousel-item ${index === 0 ? 'active' : ''}" data-image-id="${item.id}">
                                     <img src="${uploadsUrl}/${item.image_path}" class="d-block w-100 rounded-4" style="max-height: 70vh; object-fit: contain;">
                                 </div>
                             `;
@@ -2308,8 +2311,37 @@
                 } else {
                     itemsContainer.innerHTML = '<div class="text-white py-5">Chưa có ảnh hoặc video trong album này.</div>';
                     thumbsContainer.innerHTML = '';
+                    if (deletePhotoBtn) deletePhotoBtn.style.display = 'none';
                 }
             });
+    }
+
+    // Hàm xóa ảnh trực tiếp từ modal Album
+    window.deleteCurrentAlbumPhoto = function() {
+        const activeItem = document.querySelector('#albumCarousel .carousel-item.active');
+        if (!activeItem) return;
+        const imageId = activeItem.getAttribute('data-image-id');
+        if (!imageId) {
+            alert("Không tìm thấy thông tin ảnh.");
+            return;
+        }
+
+        if (confirm("Bạn có chắc chắn muốn xóa ảnh/video này khỏi kỷ niệm?")) {
+            fetch(`index.php?url=location/deleteAlbumImageJson&id=${imageId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Đã xóa ảnh thành công!");
+                        window.location.reload(); // Tải lại trang để đồng bộ tất cả các tab
+                    } else {
+                        alert("Xóa thất bại: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Có lỗi xảy ra khi kết nối máy chủ.");
+                });
+        }
     }
 
     function openTripGallery(tripId, startPhotoIndex, title = "Album Chuyến đi") {
@@ -2319,9 +2351,11 @@
         itemsContainer.innerHTML = '<div class="text-white py-5"><div class="spinner-border text-primary"></div></div>';
         thumbsContainer.innerHTML = '';
         
-        // Ẩn nút quản lý đối với album chuyến đi
+        // Ẩn nút quản lý và nút xóa đối với album chuyến đi
         const manageLink = document.getElementById('manageAlbumLink');
         if (manageLink) manageLink.style.display = 'none';
+        const deletePhotoBtn = document.getElementById('albumDeletePhotoBtn');
+        if (deletePhotoBtn) deletePhotoBtn.style.display = 'none';
 
         var albumModal = new bootstrap.Modal(document.getElementById('albumModal'));
         albumModal.show();
@@ -2338,7 +2372,7 @@
                         
                         if (isVideo) {
                             return `
-                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}">
+                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}" data-image-id="${item.id}">
                                     <video controls class="d-block w-100 rounded-4" style="max-height: 70vh; background: #000;">
                                         <source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}">
                                         Trình duyệt của bạn không hỗ trợ xem video.
@@ -2347,7 +2381,7 @@
                             `;
                         } else {
                             return `
-                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}">
+                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}" data-image-id="${item.id}">
                                     <img src="${uploadsUrl}/${item.image_path}" class="d-block w-100 rounded-4" style="max-height: 70vh; object-fit: contain;">
                                 </div>
                             `;

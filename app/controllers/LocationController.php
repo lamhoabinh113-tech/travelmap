@@ -782,6 +782,60 @@ class LocationController {
         }
     }
 
+    // Xóa một ảnh trong album (trả về JSON cho AJAX)
+    public function deleteAlbumImageJson() {
+        header('Content-Type: application/json; charset=utf-8');
+        if (isset($_GET['id'])) {
+            $image_id = intval($_GET['id']);
+            $user_id = $_SESSION['user_id'];
+
+            // Lấy location_id và tên file
+            $q_loc = "SELECT location_id, image_path FROM location_images WHERE id = :id";
+            $s_loc = $this->db->prepare($q_loc);
+            $s_loc->execute([':id' => $image_id]);
+            $row = $s_loc->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy ảnh']);
+                exit();
+            }
+
+            $location_id = $row['location_id'];
+            $file = $row['image_path'];
+
+            if ($this->locationModel->deleteImage($image_id, $user_id)) {
+                if ($file && file_exists("../uploads/" . $file)) {
+                    unlink("../uploads/" . $file);
+                }
+
+                // Cập nhật ảnh đại diện của locations nếu ảnh bị xóa trùng với ảnh đại diện chính
+                $q_main = "SELECT image FROM locations WHERE id = :loc_id";
+                $s_main = $this->db->prepare($q_main);
+                $s_main->execute([':loc_id' => $location_id]);
+                $curr_main = $s_main->fetchColumn();
+
+                if ($curr_main == $file) {
+                    // Tìm ảnh tiếp theo trong album làm đại diện mới
+                    $q_next = "SELECT image_path FROM location_images WHERE location_id = :loc_id LIMIT 1";
+                    $s_next = $this->db->prepare($q_next);
+                    $s_next->execute([':loc_id' => $location_id]);
+                    $next_img = $s_next->fetchColumn() ?: "";
+
+                    $q_up = "UPDATE locations SET image = :img WHERE id = :loc_id";
+                    $s_up = $this->db->prepare($q_up);
+                    $s_up->execute([':img' => $next_img, ':loc_id' => $location_id]);
+                }
+
+                echo json_encode(['success' => true, 'message' => 'Đã xóa tệp tin']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Không có quyền xóa ảnh này']);
+            }
+            exit();
+        }
+        echo json_encode(['success' => false, 'message' => 'Thiếu tham số']);
+        exit();
+    }
+
     // Đặt làm ảnh đại diện
     public function setFeatured() {
         if (isset($_GET['id']) && isset($_GET['location_id'])) {
