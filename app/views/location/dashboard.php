@@ -1199,7 +1199,7 @@
                 <h5 class="modal-title fw-bold">Lưu Giữ Kỷ Niệm</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="index.php?url=location/save" method="POST" enctype="multipart/form-data">
+            <form id="addMemoryForm" action="index.php?url=location/save" method="POST" enctype="multipart/form-data">
                 <div class="modal-body p-4">
                     <input type="hidden" name="latitude" id="lat">
                     <input type="hidden" name="longitude" id="lng">
@@ -2048,14 +2048,15 @@
         userManuallySetLocation = false;
         document.getElementById('liveLocationHudText').textContent = 'Đang định vị lại...';
         followLiveLocation = true;
-        document.getElementById('followLocationBtn')?.classList.add('active');
+        const followBtn = document.getElementById('followLocationBtn');
+        if (followBtn) followBtn.classList.add('active');
         requestAccurateLocation();
     }
 
     function toggleFollowLocation() {
         followLiveLocation = !followLiveLocation;
         const btn = document.getElementById('followLocationBtn');
-        btn?.classList.toggle('active', followLiveLocation);
+        if (btn) btn.classList.toggle('active', followLiveLocation);
 
         if (followLiveLocation && currentLocationMarker) {
             const pos = currentLocationMarker.getLatLng();
@@ -2578,7 +2579,9 @@
                 
                 closeLocketCamera();
                 showToast("Đã đăng khoảnh khắc thành công! Đang tải lại...", "success");
-                setTimeout(() => window.location.reload(), 1000);
+                setTimeout(() => {
+                    window.location.href = `index.php?url=location/dashboard&success=1&new_id=${data.location_id}&lat=${locketLat}&lng=${locketLng}`;
+                }, 1000);
             } else {
                 alert("Lỗi: " + data.message);
                 if (postBtn) {
@@ -2662,7 +2665,7 @@
         }
         const latEl = document.getElementById('lat');
         const lngEl = document.getElementById('lng');
-        if (latEl?.value && lngEl?.value) {
+        if (latEl && lngEl && latEl.value && lngEl.value) {
             return { latitude: latEl.value, longitude: lngEl.value };
         }
         return { latitude: '', longitude: '' };
@@ -2745,6 +2748,87 @@
             sidebar.classList.remove('mobile-open');
             socialSidebar.classList.add('mobile-open');
             overlay.classList.add('show');
+        }
+    }
+
+    // 6. Interactive Map Filtering & Polyline Redrawing
+    function applyMapFilter(type, value, element = null) {
+        if (type === 'all' || type === 'feeling') {
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const btns = Array.from(document.querySelectorAll('.filter-pill'));
+                const matched = btns.find(b => b.innerText.includes(value) || (value === '' && b.innerText === 'Tất cả'));
+                if (matched) matched.classList.add('active');
+            }
+            const selectFilter = document.getElementById('mapTripFilter');
+            if (selectFilter) selectFilter.value = '';
+        } else if (type === 'trip') {
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            const allBtn = Array.from(document.querySelectorAll('.filter-pill')).find(b => b.innerText === 'Tất cả');
+            if (allBtn && value === '') allBtn.classList.add('active');
+        }
+
+        let boundsPoints = [];
+        const combinedLocations = savedLocations.concat(friendLocations);
+
+        combinedLocations.forEach(loc => {
+            const marker = markers[loc.id];
+            if (!marker) return;
+
+            let show = false;
+            if (type === 'all' || (type === 'trip' && value === '')) {
+                show = true;
+            } else if (type === 'feeling' && loc.feeling === value) {
+                show = true;
+            } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
+                show = true;
+            }
+
+            if (show) {
+                if (!map.hasLayer(marker)) {
+                    marker.addTo(map);
+                }
+                boundsPoints.push([loc.latitude, loc.longitude]);
+            } else {
+                if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            }
+        });
+
+        if (routeLine) {
+            map.removeLayer(routeLine);
+            routeLine = null;
+        }
+
+        const visibleOwnPoints = savedLocations
+            .filter(loc => {
+                let show = false;
+                if (type === 'all' || (type === 'trip' && value === '')) {
+                    show = true;
+                } else if (type === 'feeling' && loc.feeling === value) {
+                    show = true;
+                } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
+                    show = true;
+                }
+                return show;
+            })
+            .map(loc => [loc.latitude, loc.longitude]);
+
+        if (visibleOwnPoints.length >= 2) {
+            routeLine = L.polyline(visibleOwnPoints, {
+                color: '#6366f1',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 15',
+                className: 'marching-ants-path'
+            }).addTo(map);
+        }
+
+        if (boundsPoints.length > 0) {
+            map.fitBounds(boundsPoints, { padding: [50, 50], maxZoom: 16 });
         }
     }
 
@@ -3081,7 +3165,8 @@
             
             lightboxCurrentIndex = allMedia.indexOf(target);
             if (lightboxCurrentIndex === -1) {
-                const targetSrc = target.tagName.toLowerCase() === 'video' ? (target.querySelector('source')?.src || target.src) : target.src;
+                const sourceEl = target.querySelector('source');
+                const targetSrc = target.tagName.toLowerCase() === 'video' ? ((sourceEl ? sourceEl.src : null) || target.src) : target.src;
                 lightboxCurrentIndex = lightboxMediaList.findIndex(m => m.src === targetSrc);
             }
             
@@ -3274,86 +3359,7 @@
         }
     }
 
-    // 6. Interactive Map Filtering & Polyline Redrawing
-    function applyMapFilter(type, value, element = null) {
-        if (type === 'all' || type === 'feeling') {
-            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
-            if (element) {
-                element.classList.add('active');
-            } else {
-                const btns = Array.from(document.querySelectorAll('.filter-pill'));
-                const matched = btns.find(b => b.innerText.includes(value) || (value === '' && b.innerText === 'Tất cả'));
-                if (matched) matched.classList.add('active');
-            }
-            const selectFilter = document.getElementById('mapTripFilter');
-            if (selectFilter) selectFilter.value = '';
-        } else if (type === 'trip') {
-            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
-            const allBtn = Array.from(document.querySelectorAll('.filter-pill')).find(b => b.innerText === 'Tất cả');
-            if (allBtn && value === '') allBtn.classList.add('active');
-        }
-
-        let boundsPoints = [];
-        const combinedLocations = savedLocations.concat(friendLocations);
-
-        combinedLocations.forEach(loc => {
-            const marker = markers[loc.id];
-            if (!marker) return;
-
-            let show = false;
-            if (type === 'all' || (type === 'trip' && value === '')) {
-                show = true;
-            } else if (type === 'feeling' && loc.feeling === value) {
-                show = true;
-            } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
-                show = true;
-            }
-
-            if (show) {
-                if (!map.hasLayer(marker)) {
-                    marker.addTo(map);
-                }
-                boundsPoints.push([loc.latitude, loc.longitude]);
-            } else {
-                if (map.hasLayer(marker)) {
-                    map.removeLayer(marker);
-                }
-            }
-        });
-
-        if (routeLine) {
-            map.removeLayer(routeLine);
-            routeLine = null;
-        }
-
-        const visibleOwnPoints = savedLocations
-            .filter(loc => {
-                let show = false;
-                if (type === 'all' || (type === 'trip' && value === '')) {
-                    show = true;
-                } else if (type === 'feeling' && loc.feeling === value) {
-                    show = true;
-                } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
-                    show = true;
-                }
-                return show;
-            })
-            .map(loc => [loc.latitude, loc.longitude]);
-
-        if (visibleOwnPoints.length >= 2) {
-            routeLine = L.polyline(visibleOwnPoints, {
-                color: '#6366f1',
-                weight: 5,
-                opacity: 0.8,
-                dashArray: '10, 15',
-                className: 'marching-ants-path'
-            }).addTo(map);
-        }
-
-        if (boundsPoints.length > 0) {
-            map.fitBounds(boundsPoints, { padding: [50, 50], maxZoom: 16 });
-        }
-    }
+    // (applyMapFilter moved to map script block)
 
     // 1. Leaflet Marker Ripple
     function triggerBumpRipple(lat, lng) {
@@ -3584,7 +3590,9 @@
 
                 resetWidgetLocket();
                 showToast("Đã đăng khoảnh khắc thành công! Đang tải lại...", "success");
-                setTimeout(() => window.location.reload(), 1000);
+                setTimeout(() => {
+                    window.location.href = `index.php?url=location/dashboard&success=1&new_id=${data.location_id}&lat=${locketLat}&lng=${locketLng}`;
+                }, 1000);
             } else {
                 alert("Lỗi khi đăng: " + data.message);
                 postBtn.innerHTML = oldHtml;
@@ -3969,27 +3977,49 @@
         initCardSwipe();
         calculateAchievements();
         
-        // Focus on the newly posted check-in after reload if any
-        const justPosted = sessionStorage.getItem('just_posted_loc');
-        if (justPosted) {
-            try {
-                const loc = JSON.parse(justPosted);
-                sessionStorage.removeItem('just_posted_loc');
-                
-                // Wait for map initialization to finish
-                setTimeout(() => {
-                    if (map) {
-                        map.flyTo([loc.lat, loc.lng], 16, {
-                            duration: 1.5
-                        });
-                        // Smooth ripple after flying finishes
-                        setTimeout(() => {
-                            triggerBumpRipple(loc.lat, loc.lng);
-                        }, 1600);
+        // Lấy thông tin check-in mới từ URL params (Ưu tiên)
+        const urlParams = new URLSearchParams(window.location.search);
+        const newId = urlParams.get('new_id');
+        const newLat = parseFloat(urlParams.get('lat'));
+        const newLng = parseFloat(urlParams.get('lng'));
+
+        if (newId && !isNaN(newLat) && !isNaN(newLng)) {
+            setTimeout(() => {
+                if (map) {
+                    // Di chuyển êm dịu, không phóng quá sâu dối mắt
+                    map.setView([newLat, newLng], 15);
+                    triggerBumpRipple(newLat, newLng);
+                    
+                    // Tự động mở bong bóng popup của check-in vừa đăng
+                    if (markers && markers[newId]) {
+                        markers[newId].openPopup();
                     }
-                }, 1000);
-            } catch (e) {
-                console.error("Failed to parse just_posted_loc", e);
+                }
+            }, 1000);
+
+            // Dọn dẹp query parameters trên URL để URL sạch đẹp và tránh lặp lại khi F5
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?url=location/dashboard";
+            window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        } else {
+            // Fallback sang sessionStorage (dành cho các logic cũ nếu có)
+            const justPosted = sessionStorage.getItem('just_posted_loc');
+            if (justPosted) {
+                try {
+                    const loc = JSON.parse(justPosted);
+                    sessionStorage.removeItem('just_posted_loc');
+                    
+                    setTimeout(() => {
+                        if (map) {
+                            map.setView([loc.lat, loc.lng], 15);
+                            triggerBumpRipple(loc.lat, loc.lng);
+                            if (loc.id && markers && markers[loc.id]) {
+                                markers[loc.id].openPopup();
+                            }
+                        }
+                    }, 1000);
+                } catch (e) {
+                    console.error("Failed to parse just_posted_loc", e);
+                }
             }
         }
     });

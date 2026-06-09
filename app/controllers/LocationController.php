@@ -495,7 +495,7 @@ class LocationController {
                 }
 
                 $conn->commit();
-                header("Location: index.php?url=location/dashboard&success=1");
+                header("Location: index.php?url=location/dashboard&success=1&new_id=" . $location_id . "&lat=" . $this->locationModel->latitude . "&lng=" . $this->locationModel->longitude);
             } catch (Exception $e) {
                 $conn->rollBack();
                 header("Location: index.php?url=location/dashboard&error=1");
