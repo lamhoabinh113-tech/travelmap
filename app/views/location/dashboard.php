@@ -2452,47 +2452,21 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                // Add marker to map
-                var photoIcon = L.divIcon({
-                    className: 'photo-marker',
-                    html: `
-                        <div class="marker-container" style="animation: slideUp 0.5s ease-out;">
-                            <img src="${data.image_url}" class="marker-image">
-                            <div class="marker-arrow"></div>
-                        </div>
-                    `,
-                    iconSize: [50, 50],
-                    iconAnchor: [25, 50],
-                    popupAnchor: [0, -50]
-                });
-                
-                var marker = L.marker([locketLat, locketLng], { icon: photoIcon }).addTo(map);
-                marker.on('click', function(e) {
-                    triggerBumpRipple(e.latlng.lat, e.latlng.lng);
-                });
-                marker.bindPopup(`
-                    <div class="p-2 text-center" style="width: 240px">
-                        <img src="${data.image_url}" class="img-fluid rounded-3 mb-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
-                        <h6 class="fw-bold mb-1">${data.place_name}</h6>
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-                            <small class="text-muted"><i class="bi bi-clock"></i> Vừa xong</small>
-                        </div>
-                        <p class="small text-secondary mb-0">${caption}</p>
-                    </div>
-                `);
-
-                // Fly to new marker
-                map.flyTo([locketLat, locketLng], 16);
+                // Save coordinates to sessionStorage so we can focus after reload
+                sessionStorage.setItem('just_posted_loc', JSON.stringify({
+                    lat: locketLat,
+                    lng: locketLng
+                }));
                 
                 closeLocketCamera();
-                // Optionally reload to update sidebar or dynamically prepend HTML
-                setTimeout(() => window.location.reload(), 1500);
+                showToast("Đã đăng khoảnh khắc thành công! Đang tải lại...", "success");
+                setTimeout(() => window.location.reload(), 1000);
             } else {
                 alert("Lỗi: " + data.message);
-                    if (postBtn) {
-                        postBtn.innerHTML = oldBtnText;
-                        postBtn.disabled = false;
-                    }
+                if (postBtn) {
+                    postBtn.innerHTML = oldBtnText;
+                    postBtn.disabled = false;
+                }
             }
         })
         .catch(err => {
@@ -3323,37 +3297,15 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                var photoIcon = L.divIcon({
-                    className: 'photo-marker',
-                    html: `
-                        <div class="marker-container" style="animation: slideUp 0.5s ease-out;">
-                            <img src="${data.image_url}" class="marker-image">
-                            <div class="marker-arrow"></div>
-                        </div>
-                    `,
-                    iconSize: [50, 50],
-                    iconAnchor: [25, 50],
-                    popupAnchor: [0, -50]
-                });
-                
-                var marker = L.marker([locketLat, locketLng], { icon: photoIcon }).addTo(map);
-                marker.on('click', function(e) {
-                    triggerBumpRipple(e.latlng.lat, e.latlng.lng);
-                });
-                marker.bindPopup(`
-                    <div class="p-2 text-center" style="width: 240px">
-                        <img src="${data.image_url}" class="img-fluid rounded-3 mb-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
-                        <h6 class="fw-bold mb-1">${data.place_name}</h6>
-                        <p class="small text-secondary mb-0">${caption}</p>
-                    </div>
-                `);
-
-                triggerBumpRipple(locketLat, locketLng);
-                map.flyTo([locketLat, locketLng], 16);
+                // Save coordinates to sessionStorage
+                sessionStorage.setItem('just_posted_loc', JSON.stringify({
+                    lat: locketLat,
+                    lng: locketLng
+                }));
 
                 resetWidgetLocket();
-                
-                setTimeout(() => window.location.reload(), 1200);
+                showToast("Đã đăng khoảnh khắc thành công! Đang tải lại...", "success");
+                setTimeout(() => window.location.reload(), 1000);
             } else {
                 alert("Lỗi khi đăng: " + data.message);
                 postBtn.innerHTML = oldHtml;
@@ -3701,10 +3653,65 @@
         }
     });
 
+    // Helper to show a premium overlay toast
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast-popup px-4 py-2 rounded-pill text-white fw-bold shadow-lg d-flex align-items-center gap-2`;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '80px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        toast.style.opacity = '0';
+        toast.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        toast.style.zIndex = '10000';
+        toast.style.background = type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)';
+        toast.style.backdropFilter = 'blur(10px)';
+        toast.style.border = '1px solid rgba(255,255,255,0.2)';
+        toast.style.fontSize = '12px';
+        
+        const icon = type === 'success' ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-exclamation-triangle-fill"></i>';
+        toast.innerHTML = `${icon} <span>${message}</span>`;
+        
+        document.body.appendChild(toast);
+        toast.offsetHeight; // force reflow
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.opacity = '1';
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(-50%) translateY(20px)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 400);
+        }, 3000);
+    }
+
     // Initialize lightbox and swipe stacks on load
     document.addEventListener('DOMContentLoaded', () => {
         initLightbox();
         initCardSwipe();
+        
+        // Focus on the newly posted check-in after reload if any
+        const justPosted = sessionStorage.getItem('just_posted_loc');
+        if (justPosted) {
+            try {
+                const loc = JSON.parse(justPosted);
+                sessionStorage.removeItem('just_posted_loc');
+                
+                // Wait for map initialization to finish
+                setTimeout(() => {
+                    if (map) {
+                        map.flyTo([loc.lat, loc.lng], 16, {
+                            duration: 1.5
+                        });
+                        // Smooth ripple after flying finishes
+                        setTimeout(() => {
+                            triggerBumpRipple(loc.lat, loc.lng);
+                        }, 1600);
+                    }
+                }, 1000);
+            } catch (e) {
+                console.error("Failed to parse just_posted_loc", e);
+            }
+        }
     });
 
     // Trip Action Helpers
