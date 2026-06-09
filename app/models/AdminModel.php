@@ -222,9 +222,34 @@ class AdminModel {
         $imgs->execute([':id' => $id]);
         $images = $imgs->fetchAll(PDO::FETCH_COLUMN);
 
-        $stmt = $this->conn->prepare("DELETE FROM locations WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-        return $images;
+        $this->conn->beginTransaction();
+        try {
+            // Xóa comments
+            $s1 = $this->conn->prepare("DELETE FROM comments WHERE location_id = :id");
+            $s1->execute([':id' => $id]);
+
+            // Xóa likes
+            $s2 = $this->conn->prepare("DELETE FROM likes WHERE location_id = :id");
+            $s2->execute([':id' => $id]);
+
+            // Xóa image_messages
+            $s3 = $this->conn->prepare("DELETE FROM image_messages WHERE image_id IN (SELECT id FROM location_images WHERE location_id = :id)");
+            $s3->execute([':id' => $id]);
+
+            // Xóa location_images
+            $s4 = $this->conn->prepare("DELETE FROM location_images WHERE location_id = :id");
+            $s4->execute([':id' => $id]);
+
+            // Xóa locations
+            $s5 = $this->conn->prepare("DELETE FROM locations WHERE id = :id");
+            $s5->execute([':id' => $id]);
+
+            $this->conn->commit();
+            return $images;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
     }
 
     public function toggleHidePost($id) {

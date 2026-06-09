@@ -272,15 +272,42 @@ class LocationModel {
         $stmt_images->execute();
         $images = $stmt_images->fetchAll(PDO::FETCH_ASSOC);
 
-        $query = "DELETE FROM " . $this->table_name . " WHERE id = :id AND user_id = :user_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":id", $id);
-        $stmt->bindParam(":user_id", $user_id);
-        
-        if ($stmt->execute()) {
+        // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+        $this->conn->beginTransaction();
+        try {
+            // 1. Xóa comments của địa điểm này
+            $q_comm = "DELETE FROM comments WHERE location_id = :id";
+            $s_comm = $this->conn->prepare($q_comm);
+            $s_comm->execute([':id' => $id]);
+
+            // 2. Xóa likes của địa điểm này
+            $q_likes = "DELETE FROM likes WHERE location_id = :id";
+            $s_likes = $this->conn->prepare($q_likes);
+            $s_likes->execute([':id' => $id]);
+
+            // 3. Xóa các bình luận ảnh (image_messages) liên quan đến các ảnh của địa điểm này
+            $q_img_msgs = "DELETE FROM image_messages WHERE image_id IN (SELECT id FROM location_images WHERE location_id = :id)";
+            $s_img_msgs = $this->conn->prepare($q_img_msgs);
+            $s_img_msgs->execute([':id' => $id]);
+
+            // 4. Xóa ảnh trong bảng location_images
+            $q_imgs = "DELETE FROM location_images WHERE location_id = :id";
+            $s_imgs = $this->conn->prepare($q_imgs);
+            $s_imgs->execute([':id' => $id]);
+
+            // 5. Xóa địa điểm trong bảng locations
+            $query = "DELETE FROM " . $this->table_name . " WHERE id = :id AND user_id = :user_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(":id", $id);
+            $stmt->bindParam(":user_id", $user_id);
+            $stmt->execute();
+
+            $this->conn->commit();
             return $images; // Trả về danh sách ảnh để Controller xóa file
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
         }
-        return false;
     }
 
     // Thêm ảnh vào album
@@ -321,10 +348,10 @@ class LocationModel {
 
     // Xóa một ảnh trong album
     public function deleteImage($image_id, $user_id) {
-        // Kiểm tra quyền sở hữu thông qua location_id
-        $query = "DELETE li FROM location_images li
-                  JOIN locations l ON li.location_id = l.id
-                  WHERE li.id = :image_id AND l.user_id = :user_id";
+        // Kiểm tra quyền sở hữu thông qua location_id dùng subquery để tương thích SQLite/MySQL MyISAM
+        $query = "DELETE FROM location_images 
+                  WHERE id = :image_id 
+                    AND location_id IN (SELECT id FROM locations WHERE user_id = :user_id)";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(":image_id", $image_id);
         $stmt->bindParam(":user_id", $user_id);

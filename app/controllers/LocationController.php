@@ -755,6 +755,25 @@ class LocationController {
                 if ($file && file_exists("../uploads/" . $file)) {
                     unlink("../uploads/" . $file);
                 }
+
+                // Cập nhật ảnh đại diện của locations nếu ảnh bị xóa trùng với ảnh đại diện chính
+                $q_loc = "SELECT image FROM locations WHERE id = :loc_id";
+                $s_loc = $this->db->prepare($q_loc);
+                $s_loc->execute([':loc_id' => $location_id]);
+                $curr_main = $s_loc->fetchColumn();
+
+                if ($curr_main == $file) {
+                    // Tìm ảnh tiếp theo trong album làm đại diện mới, nếu không còn ảnh nào thì để trống
+                    $q_next = "SELECT image_path FROM location_images WHERE location_id = :loc_id LIMIT 1";
+                    $s_next = $this->db->prepare($q_next);
+                    $s_next->execute([':loc_id' => $location_id]);
+                    $next_img = $s_next->fetchColumn() ?: "";
+
+                    $q_up = "UPDATE locations SET image = :img WHERE id = :loc_id";
+                    $s_up = $this->db->prepare($q_up);
+                    $s_up->execute([':img' => $next_img, ':loc_id' => $location_id]);
+                }
+                
                 header("Location: index.php?url=location/manageAlbum&id=" . $location_id . "&success=deleted");
             } else {
                 header("Location: index.php?url=location/manageAlbum&id=" . $location_id . "&error=delete_failed");
