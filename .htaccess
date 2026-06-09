@@ -1,16 +1,16 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /travel-memory-map/
 
-    # Bỏ qua nếu là file hoặc thư mục thật (uploads/, css/, js/, ảnh...)
+    # Bỏ qua nếu là file hoặc thư mục thật ở thư mục gốc (như uploads/)
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Bỏ qua nếu request đã trỏ đúng vào thư mục public/
-    RewriteCond %{REQUEST_URI} ^/travel-memory-map/public/
-    RewriteRule ^ - [L]
+    # CASE 1: Chạy ở local (nếu url chứa /travel-memory-map/)
+    RewriteCond %{REQUEST_URI} ^/travel-memory-map/ [NC]
+    RewriteRule ^(.*)$ /travel-memory-map/public/$1 [L]
 
-    # Chuyển mọi request vào thư mục public/
-    RewriteRule ^(.*)$ public/$1 [L]
+    # CASE 2: Chạy ở production (nằm ngay ở gốc tên miền /)
+    RewriteCond %{REQUEST_URI} !^/travel-memory-map/ [NC]
+    RewriteRule ^(.*)$ /public/$1 [L]
 </IfModule>
