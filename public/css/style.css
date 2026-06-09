@@ -799,3 +799,40 @@ body {
     }
 }
 
+/* AI Chat Quick Chips in Dashboard */
+.ai-chat-quick-chips {
+    padding: 8px 12px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    scrollbar-width: none; /* Firefox */
+    flex-shrink: 0;
+}
+.ai-chat-quick-chips::-webkit-scrollbar {
+    display: none; /* Safari/Chrome */
+}
+.ai-chat-chip {
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: var(--neu-shadow-flat);
+    transition: all 0.2s ease;
+}
+.ai-chat-chip:hover {
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--neu-shadow-hover);
+}
+.ai-chat-chip:active {
+    box-shadow: var(--neu-shadow-pressed);
+    transform: translateY(0);
+}
+

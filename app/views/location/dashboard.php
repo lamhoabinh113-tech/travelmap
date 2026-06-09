@@ -3124,7 +3124,14 @@
             <div class="close-btn" onclick="toggleAIChat()"><i class="bi bi-x-lg"></i></div>
         </div>
         <div class="ai-chat-body" id="aiChatBody">
-            <div class="ai-msg bot">Chào bạn! Tôi có thể giúp gì cho chuyến đi của bạn? (Gợi ý địa điểm, lịch trình...)</div>
+            <div class="ai-msg bot">Chào bạn! Tôi có thể giúp gì cho chuyến đi của bạn? (Gợi ý lộ trình, phương tiện đi lại, đặc sản, lịch trình...)</div>
+        </div>
+        <div class="ai-chat-quick-chips">
+            <div class="ai-chat-chip" onclick="setAIChatQuestion('Lịch trình phượt Hà Nội - Hà Giang 3 ngày')">Lộ trình Hà Giang</div>
+            <div class="ai-chat-chip" onclick="setAIChatQuestion('Từ Sài Gòn đi Đà Lạt bằng xe máy hết mấy tiếng?')">Sài Gòn - Đà Lạt</div>
+            <div class="ai-chat-chip" onclick="setAIChatQuestion('Lịch trình 3 ngày 2 đêm Đà Nẵng ăn uống check-in')">Tour Đà Nẵng</div>
+            <div class="ai-chat-chip" onclick="setAIChatQuestion('Đặc sản gì ngon nên thử ở Hải Dương?')">Ẩm thực Hải Dương</div>
+            <div class="ai-chat-chip" onclick="setAIChatQuestion('Viết hộ caption chill ghim lên bản đồ')">Caption du lịch</div>
         </div>
         <div class="ai-chat-input">
             <input type="text" id="aiChatInput" placeholder="Hỏi AI..." onkeypress="if(event.key === 'Enter') sendAIMessage()">
@@ -3134,7 +3141,15 @@
     
     <script>
     function toggleAIChat() {
-        document.getElementById('aiChatWindow').classList.toggle('active');
+        document.getElementById('aiChatWindow').classList.toggle('open'); // Sửa class toggle từ active thành open để khớp với css .ai-chat-window.open
+    }
+
+    function setAIChatQuestion(text) {
+        const input = document.getElementById('aiChatInput');
+        if (input) {
+            input.value = text;
+            input.focus();
+        }
     }
     
     function sendAIMessage() {
@@ -3160,23 +3175,47 @@
         body.appendChild(botMsg);
         body.scrollTop = body.scrollHeight;
         
-        // Call backend or mock response
+        // Lấy tọa độ GPS hiện tại từ các ô input ẩn nếu có
+        const latVal = document.getElementById('lat') ? document.getElementById('lat').value : '';
+        const lngVal = document.getElementById('lng') ? document.getElementById('lng').value : '';
+        
+        // Gọi API thật của AiController -> ask
         setTimeout(() => {
-            fetch('index.php?url=chat/ask', {
+            fetch('index.php?url=ai/ask', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    question: text,
+                    latitude: latVal,
+                    longitude: lngVal
+                })
             })
             .then(res => res.json())
             .then(data => {
-                botMsg.innerHTML = data.reply || 'Xin lỗi, tôi chưa hiểu rõ ý bạn.';
+                botMsg.innerHTML = data.success ? linkifyText(data.message) : 'Có lỗi: ' + escapeHTMLText(data.message);
                 body.scrollTop = body.scrollHeight;
             })
             .catch(() => {
-                botMsg.innerHTML = 'Tuyệt vời! Gợi ý là bạn nên khám phá thêm ẩm thực địa phương nhé.'; // Fallback
+                botMsg.innerHTML = 'Không thể kết nối đến dịch vụ AI. Vui lòng thử lại sau.';
                 body.scrollTop = body.scrollHeight;
             });
         }, 1000);
+    }
+
+    function escapeHTMLText(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    function linkifyText(text) {
+        const escaped = escapeHTMLText(text);
+        // Replace newlines with <br> and format markdown bullet points slightly
+        let formatted = escaped.replace(/\n/g, '<br>');
+        // Bold markdown format
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Link format
+        return formatted.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
     }
 
     // Lightbox Implementation

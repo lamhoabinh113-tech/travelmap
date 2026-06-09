@@ -121,22 +121,28 @@ class AiController {
     }
 
     private function getSystemPrompt($context) {
-        return 'Bạn là Travel Memory AI — cố vấn du lịch thông minh, thân thiện, trả lời tiếng Việt tự nhiên.
+        return 'Bạn là Travel Memory AI — trợ lý du lịch siêu năng động, đam mê xê dịch, luôn tràn đầy năng lượng và am hiểu sâu sắc về du lịch Việt Nam. Bạn được tích hợp trực tiếp vào ứng dụng "Travel Memory Map" (Bản đồ ký ức du lịch).
 
-NHIỆM VỤ:
-- Lập lịch trình tour theo ngày/buổi (sáng-trưa-chiều-tối), linh hoạt theo số ngày và vibe chuyến đi.
-- Gợi ý địa điểm đẹp, điểm check-in, quán ăn/món ngon, cafe nghỉ chân — ưu tiên dữ liệu POI/nguồn mở được cung cấp.
-- Dự báo thời tiết và đưa lời khuyên mặc đồ/di chuyển (nếu có dữ liệu thời tiết trong ngữ cảnh).
-- Trả lời câu hỏi mở: "đi đâu", "ăn gì", "có nên đi không" — phân tích ưu/nhược, đưa 2-3 phương án.
-- Viết caption, nhật ký, story khi được yêu cầu.
+NHIỆM VỤ CHÍNH:
+1. GỢI Ý LỘ TRÌNH DI CHUYỂN & ĐIỂM ĐI - ĐIỂM ĐẾN:
+   - Khi người dùng hỏi về cách đi từ điểm A đến điểm B (ví dụ: Hà Nội -> Đà Nẵng, Sài Gòn -> Đà Lạt, v.v.), hãy gợi ý chi tiết: các phương tiện di chuyển (máy bay, tàu hỏa, xe khách, phượt xe máy), thời gian đi, khoảng cách, chi phí ước tính và các cung đường/điểm dừng chân ngắm cảnh dọc đường tuyệt đẹp (ví dụ: đèo Hải Vân, vịnh Lăng Cô, v.v.).
+2. LẬP LỊCH TRÌNH CHI TIẾT & ĐA DẠNG:
+   - Thiết kế lịch trình du lịch cụ thể theo ngày và buổi (Sáng - Trưa - Chiều - Tối) linh hoạt cho các khoảng thời gian (1 ngày, 2N1Đ, 3N2Đ, 4N3Đ, v.v.).
+   - Cá nhân hóa lịch trình theo phong cách xê dịch: phượt bụi phiêu lưu, nghỉ dưỡng chill nhẹ nhàng, du lịch ẩm thực (food tour), du lịch cặp đôi lãng mạn, hoặc đi nhóm bạn năng động.
+3. GỢI Ý ĐỊA ĐIỂM & ĐẶC SẢN ĐỊA PHƯƠNG:
+   - Gợi ý các danh lam thắng cảnh nổi tiếng, góc chụp ảnh sống ảo độc lạ, các món ăn đặc sản vùng miền nhất định phải thử và các quán ăn được người bản địa đánh giá cao. Ưu tiên sử dụng dữ liệu POI từ ngữ cảnh nếu có.
+4. TƯƠNG TÁC VỚI TÍNH NĂNG CỦA WEB "TRAVEL MEMORY MAP":
+   - Nhắc nhở và khuyến khích người dùng tận dụng các tính năng của trang web:
+     * Tạo một "Chuyến đi" (Trip) mới trên web để quản lý hành trình này.
+     * Check-in ghim vị trí lên bản đồ để vẽ đường lộ trình "Marching Ants" (kiến bò) tuyệt đẹp.
+     * Chụp ảnh nhanh bằng Locket Widget để lưu lại khoảnh khắc tức thì.
+     * Thả cảm xúc (Hạnh phúc, Tuyệt vời, Bình yên...) và viết nhật ký/caption cho mỗi check-in.
+     * Mở khóa các huy chương thành tựu (Thám Hiểm, Cú Đêm, Locket Master...) trên web.
 
-CÁCH TRẢ LỜI:
-- Có cấu trúc (tiêu đề, bullet, emoji vừa phải), biến tấu văn phong theo tone người dùng.
-- Kết hợp dữ liệu thực (Wikipedia, OSM, thời tiết, hành trình cũ của user) với suy luận hợp lý.
-- Khi thiếu dữ liệu: nói rõ "gợi ý tham khảo", đề xuất cách user bổ sung (địa điểm, ngày, ngân sách, sở thích).
-- Không bịa tên địa điểm cụ thể nếu không có trong ngữ cảnh; có thể gợi ý loại hình (phố cổ, biển, đồi núi).
-
-KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, và mở rộng thêm khi phù hợp.';
+CÁCH TRÌNH BÀY & TONE GIỌNG:
+- Trả lời bằng tiếng Việt, văn phong hiện đại, cởi mở, truyền cảm hứng xê dịch ("xách balo lên và đi"), nhiều năng lượng, sử dụng các emoji phù hợp (🚗, ✈️, 🏔️, 📸, 🍜).
+- Định dạng rõ ràng bằng các tiêu đề, danh sách dạng gạch đầu dòng (bullet points) để người dùng dễ đọc trên cả điện thoại và máy tính.
+- Tuyệt đối không trả lời chung chung hoặc bịa đặt địa danh không tồn tại. Nếu không đủ dữ liệu, hãy gợi ý giải pháp tham khảo và hướng dẫn người dùng cung cấp thêm thông tin (ngày đi, ngân sách, điểm xuất phát).';
     }
 
     private function geminiChat($question, $latitude, $longitude, $context, $apiKey) {
@@ -196,9 +202,21 @@ KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, 
         return $this->fallbackTravelMemoryResponse($question, $latitude, $longitude, $context);
     }
 
+    private function fallbackTravelMemoryResponse($question, $latitude, $longitude, $context) {
+        return $this->smartLocalRespond($question, $context);
+    }
+
     private function smartLocalRespond($question, $context) {
         $questionLower = $this->lower($question);
         $scores = $this->scoreIntents($questionLower);
+
+        // Check for start & end route points first
+        if (($scores['route'] ?? 0) >= 2) {
+            $routePoints = $this->detectRoutePoints($question);
+            if ($routePoints['start'] && $routePoints['end']) {
+                return $this->composeRouteAnswer($routePoints['start'], $routePoints['end'], $context);
+            }
+        }
 
         if (($scores['caption'] ?? 0) >= 3) {
             return $this->composeCaption($context);
@@ -225,7 +243,7 @@ KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, 
     private function scoreIntents($questionLower) {
         $scores = [
             'weather' => 0, 'itinerary' => 0, 'scenic' => 0, 'checkin' => 0,
-            'food' => 0, 'caption' => 0, 'journal' => 0, 'advisor' => 1
+            'food' => 0, 'caption' => 0, 'journal' => 0, 'route' => 0, 'advisor' => 1
         ];
 
         $map = [
@@ -236,6 +254,7 @@ KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, 
             'food' => ['ăn gì', 'an gi', 'đồ ăn', 'do an', 'món ngon', 'mon ngon', 'quán', 'quan ', 'nhà hàng', 'đặc sản', 'cafe', 'cà phê', 'food'],
             'caption' => ['caption', 'hashtag', 'chú thích'],
             'journal' => ['nhật ký', 'nhat ky', 'story', 'câu chuyện'],
+            'route' => ['đi từ', 'di tu', 'đến từ', 'den tu', 'lộ trình', 'lo trinh', 'đường đi', 'duong di', 'phương tiện', 'phuong tien', 'di chuyển', 'di chuyen', 'khoảng cách', 'khoang cach', 'mất bao lâu', 'mat bao lau', 'xe khách', 'xe khach', 'máy bay', 'may bay', 'tàu hỏa', 'tau hoa', 'xe máy', 'xe may', 'phượt', 'phuot', 'di tu', 'tu ', 'từ ']
         ];
 
         foreach ($map as $intent => $words) {
@@ -1264,6 +1283,128 @@ KIẾN THỨC ĐÃ LƯU: dùng mục "Kiến thức đã tích lũy" nếu có, 
         ]);
 
         return @file_get_contents($url, false, $context);
+    }
+
+    private function detectRoutePoints($question) {
+        $q = $this->lower($question);
+        $start = null;
+        $end = null;
+
+        if (preg_match('/từ\s+([\p{L}\s]{2,20}?)\s+(?:đi|đến|tới|ra|vào)\s+([\p{L}\s]{2,20}?)(?:\s+bằng|\s+như|\s*\?|\.|$)/iu', $question, $matches)) {
+            $start = trim($matches[1]);
+            $end = trim($matches[2]);
+        } elseif (preg_match('/lộ\s+trình\s+([\p{L}\s]{2,20}?)\s*-\s*([\p{L}\s]{2,20}?)(?:\s*\?|\.|$)/iu', $question, $matches)) {
+            $start = trim($matches[1]);
+            $end = trim($matches[2]);
+        } elseif (preg_match('/đi\s+([\p{L}\s]{2,20}?)\s+từ\s+([\p{L}\s]{2,20}?)(?:\s+bằng|\s+như|\s*\?|\.|$)/iu', $question, $matches)) {
+            $end = trim($matches[1]);
+            $start = trim($matches[2]);
+        }
+
+        $cleanup = function($str) {
+            if (!$str) return null;
+            $str = preg_replace('/\s+(bằng|như|khoảng|mất|xe|máy|tàu|phượt|lịch|cách|tại|đi|bao|nhiêu|nào|đầu|cuối|nhanh|chậm|tiện|loại|hợp|vibe|với|ở|tới|đến|ra|vào).*$/iu', '', $str);
+            return ucwords(trim($str));
+        };
+
+        return [
+            'start' => $cleanup($start),
+            'end' => $cleanup($end)
+        ];
+    }
+
+    private function composeRouteAnswer($start, $end, $context) {
+        $key = $this->lower($start) . ' - ' . $this->lower($end);
+        $keyRev = $this->lower($end) . ' - ' . $this->lower($start);
+
+        $routesDb = [
+            'hà nội - đà nẵng' => [
+                'dist' => 'khoảng 760 km',
+                'plane' => '1 giờ 20 phút (Bay từ Nội Bài đến sân bay Đà Nẵng)',
+                'train' => '15 - 17 tiếng (Các chuyến tàu SE chạy dọc Bắc - Nam)',
+                'coach' => '14 - 16 tiếng (Xuất phát từ bến xe Giáp Bát, Mỹ Đình hoặc Nước Ngầm)',
+                'motorbike' => 'Đi dọc Quốc lộ 1A hoặc Đường Hồ Chí Minh qua dãy Trường Sơn. Nên chia lộ trình thành 3 ngày, dừng chân nghỉ ngơi và check-in tại Nghệ An, Quảng Bình (Phong Nha), và Huế (vượt đèo Hải Vân kỳ vĩ).'
+            ],
+            'hà nội - sa pa' => [
+                'dist' => 'khoảng 320 km',
+                'plane' => 'Không có đường bay thẳng (chỉ có thể bay đến Nội Bài rồi đi xe đường bộ)',
+                'train' => 'Khoảng 8 tiếng đi tàu hỏa đêm từ ga Hà Nội đến ga Lào Cai, sau đó bắt xe buýt hoặc taxi khoảng 1 tiếng lên thị trấn Sa Pa',
+                'coach' => '5 - 6 tiếng đi xe khách giường nằm hoặc xe cabin limousine chạy đường cao tốc Nội Bài - Lào Cai cực kỳ êm ái',
+                'motorbike' => 'Cung đường phượt khoảng 7 - 8 tiếng qua Yên Bái hoặc theo hướng Nghĩa Lộ - Mù Cang Chải vượt đèo Khau Phạ trước khi sang Sa Pa.'
+            ],
+            'hà nội - hà giang' => [
+                'dist' => 'khoảng 300 km',
+                'plane' => 'Không có sân bay (chỉ di chuyển đường bộ)',
+                'train' => 'Không có tuyến tàu hỏa lên Hà Giang',
+                'coach' => '6 - 7 tiếng đi xe giường nằm đêm từ Mỹ Đình. Nên đi xe đêm để sáng sớm tới TP. Hà Giang',
+                'motorbike' => 'Phượt xe máy khoảng 7 - 8 tiếng theo QL2. Hoặc phương án an toàn nhất: đi xe khách lên TP. Hà Giang rồi thuê xe máy tại đó để chinh phục cung Loop (Quản Bạ - Yên Minh - Đồng Văn - Mèo Vạc).'
+            ],
+            'sài gòn - đà lạt' => [
+                'dist' => 'khoảng 310 km',
+                'plane' => '50 phút bay từ Tân Sơn Nhất đến sân bay Liên Khương, sau đó đi xe buýt sân bay 45 phút vào trung tâm Đà Lạt',
+                'train' => 'Không có tuyến tàu hỏa chạy thẳng từ Sài Gòn lên Đà Lạt (chỉ có ga Trại Mát chạy tham quan ngắn)',
+                'coach' => '6 - 8 tiếng đi xe giường nằm cao cấp (Thành Bưởi, Phương Trang, Nguyễn Kim) leo đèo Bảo Lộc',
+                'motorbike' => 'Khoảng 7 - 9 tiếng đi xe máy qua ngả Đồng Nai, leo đèo Bảo Lộc và đèo Prenn. Đoạn đèo Bảo Lộc cần đi cẩn thận vì lưu lượng xe lớn.'
+            ],
+            'sài gòn - vũng tàu' => [
+                'dist' => 'khoảng 120 km',
+                'plane' => 'Không di chuyển bằng máy bay',
+                'train' => 'Không có tuyến tàu hỏa',
+                'coach' => '2 - 2.5 tiếng đi xe limousine đón tận nơi (Hoa Mai, Toàn Thắng, Anh Quốc)',
+                'motorbike' => '2.5 - 3 tiếng di chuyển bằng xe máy qua phà Cát Lái sang Nhơn Trạch rồi đi dọc QL51, hoặc đi đường xa lộ Hà Nội.'
+            ],
+            'sài gòn - nha trang' => [
+                'dist' => 'khoảng 430 km',
+                'plane' => '1 giờ bay từ Tân Sơn Nhất đến sân bay Cam Ranh, sau đó đi taxi hoặc xe buýt 35km vào TP. Nha Trang',
+                'train' => '8 tiếng đi tàu hỏa (có chuyến tàu 5 sao Sài Gòn - Nha Trang chạy đêm rất thoải mái)',
+                'coach' => '8 - 9 tiếng đi xe giường nằm chạy dọc Quốc lộ 1A',
+                'motorbike' => 'Hành trình phượt ven biển tuyệt đẹp khoảng 9 - 10 tiếng qua Phan Thiết (Mũi Né), Phan Rang (vịnh Vĩnh Hy) rồi tới Nha Trang.'
+            ],
+            'sài gòn - cần thơ' => [
+                'dist' => 'khoảng 170 km',
+                'plane' => 'Không bay trực tiếp giữa 2 thành phố gần nhau này',
+                'train' => 'Không có tuyến tàu hỏa miền Tây',
+                'coach' => '3 - 4 tiếng đi xe khách qua cao tốc Trung Lương - Mỹ Thuận cực nhanh',
+                'motorbike' => 'Khoảng 4 - 5 tiếng đi xe máy dọc QL1A cũ qua Long An, Tiền Giang, Vĩnh Long.'
+            ]
+        ];
+
+        $route = null;
+        foreach ($routesDb as $rKey => $rVal) {
+            if (strpos($key, $rKey) !== false || strpos($keyRev, $rKey) !== false) {
+                $route = $rVal;
+                break;
+            }
+        }
+
+        $name = $_SESSION['full_name'] ?? 'bạn';
+        $out = "🧭 **Travel Memory AI — Hướng Dẫn Lộ Trình** 🧭\n\nChào {$name}! Mình đã phân tích hành trình di chuyển từ **{$start}** đi **{$end}**.\n\n";
+
+        if ($route) {
+            $out .= "📏 **Khoảng cách di chuyển:** {$route['dist']}\n\n";
+            $out .= "🚗 **Các phương tiện di chuyển gợi ý:**\n";
+            if ($route['plane'] !== 'Không di chuyển bằng máy bay' && strpos($route['plane'], 'Không có') === false) {
+                $out .= "✈️ **Máy bay:** {$route['plane']}\n";
+            }
+            if ($route['train'] !== 'Không có tuyến tàu hỏa' && strpos($route['train'], 'Không có') === false) {
+                $out .= "🚂 **Tàu hỏa:** {$route['train']}\n";
+            }
+            $out .= "🚌 **Xe khách:** {$route['coach']}\n";
+            $out .= "🏍️ **Phượt xe máy:** {$route['motorbike']}\n\n";
+        } else {
+            $out .= "📏 **Khoảng cách & Hướng di chuyển:** Đây là cung đường kết nối giữa hai địa danh thuộc mạng lưới du lịch Việt Nam.\n\n";
+            $out .= "🚗 **Gợi ý phương tiện phổ thông:**\n";
+            $out .= "✈️ **Máy bay:** Kiểm tra xem {$end} (hoặc thành phố lân cận) có sân bay thương mại hay không. Nếu có, bay là giải pháp nhanh nhất.\n";
+            $out .= "🚌 **Xe giường nằm / Limousine:** Luôn có các chuyến xe khách chạy liên tỉnh chạy ngày/đêm. Bạn nên đặt xe trước 1-2 ngày.\n";
+            $out .= "🏍️ **Xe máy (Phượt tự túc):** Phù hợp với cung đường dưới 300km hoặc các bạn đam mê chinh phục thử thách. Hãy bảo dưỡng xe tốt, chuẩn bị bản đồ offline và đồ bảo hộ đầy đủ trước khi lên đường.\n\n";
+        }
+
+        $out .= "💡 **Tính năng bổ trợ từ Travel Memory Map:**\n";
+        $out .= "1. Hãy tạo một **Chuyến đi mới** trên website với tên `\"Hành trình từ {$start} đi {$end}\"` để bắt đầu lưu trữ.\n";
+        $out .= "2. Khi di chuyển, cứ mỗi điểm dừng chân ăn uống hoặc chụp ảnh đẹp, bạn hãy **Thêm Check-in** mới vào chuyến đi đó trên web. Bản đồ sẽ tự động vẽ đường lộ trình kiến bò chuyển động ('Marching Ants') kết nối các kỷ niệm của bạn thành một thước phim sống động!\n";
+        $out .= "3. Đừng quên mở tab **Hồ sơ** để xem các huy chương hành trình bạn đã mở khóa nhé! Chúc bạn có một hành trình an toàn và đầy ắp kỷ niệm đẹp!";
+
+        return $out;
     }
 }
 ?>
