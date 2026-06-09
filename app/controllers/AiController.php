@@ -63,26 +63,42 @@ class AiController {
     }
 
     private function getAiResponse($question, $latitude = null, $longitude = null) {
-        $context = $this->collectTravelContext($question, $latitude, $longitude, $_SESSION['user_id']);
-        $localAnswer = $this->smartLocalRespond($question, $context);
-
-        $geminiKey = getenv('GEMINI_API_KEY');
-        if ($geminiKey) {
-            $remoteAnswer = $this->geminiChat($question, $latitude, $longitude, $context, $geminiKey);
-            if (!$this->isWeakAiReply($remoteAnswer)) {
-                return $remoteAnswer;
-            }
+        try {
+            $context = $this->collectTravelContext($question, $latitude, $longitude, $_SESSION['user_id']);
+        } catch (Exception $e) {
+            $context = [
+                'destination' => $this->extractDestination($question),
+                'days' => $this->extractDays($question),
+                'lat' => $latitude, 'lon' => $longitude,
+                'display_name' => null, 'summary' => null, 'weather' => null,
+                'curated' => null, 'user_journeys' => [], 'cached_knowledge' => null,
+                'chat_history' => $_SESSION['ai_chat_history'] ?? [],
+                'sources' => [], 'pois' => ['attractions'=>[],'food'=>[],'cafes'=>[],'parks'=>[],'culture'=>[]]
+            ];
+            $context['curated'] = $this->resolveCuratedPack($context['destination']);
         }
 
-        $openaiKey = getenv('OPENAI_API_KEY');
-        if ($openaiKey) {
-            $remoteAnswer = $this->openAiChat($question, $latitude, $longitude, $context, $openaiKey);
-            if (!$this->isWeakAiReply($remoteAnswer)) {
-                return $remoteAnswer;
+        try {
+            $geminiKey = getenv('GEMINI_API_KEY');
+            if ($geminiKey && strlen(trim($geminiKey)) > 10) {
+                $remoteAnswer = $this->geminiChat($question, $latitude, $longitude, $context, $geminiKey);
+                if (!$this->isWeakAiReply($remoteAnswer)) {
+                    return $remoteAnswer;
+                }
             }
-        }
+        } catch (Exception $e) { /* Gemini unavailable, continue */ }
 
-        return $localAnswer;
+        try {
+            $openaiKey = getenv('OPENAI_API_KEY');
+            if ($openaiKey && strlen(trim($openaiKey)) > 10) {
+                $remoteAnswer = $this->openAiChat($question, $latitude, $longitude, $context, $openaiKey);
+                if (!$this->isWeakAiReply($remoteAnswer)) {
+                    return $remoteAnswer;
+                }
+            }
+        } catch (Exception $e) { /* OpenAI unavailable, continue */ }
+
+        return $this->smartLocalRespond($question, $context);
     }
 
     private function isWeakAiReply($text) {
@@ -237,7 +253,132 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
             return $this->composeScenicAnswer($context);
         }
 
+        // Trả lời chào hỏi / giới thiệu
+        if ($this->isGreeting($questionLower)) {
+            return $this->composeGreetingResponse($context);
+        }
+
+        // Trả lời câu hỏi tổng quát về du lịch
+        if ($this->isGeneralTravelQuestion($questionLower)) {
+            return $this->composeGeneralTravelResponse($question, $context);
+        }
+
         return $this->composeAdvisorAnswer($question, $context, $scores);
+    }
+
+    private function isGreeting($text) {
+        $greetings = ['xin chào', 'hello', 'hi ', 'chào', 'chao', 'hey', 'alo', 'xin chao', 'mày là ai', 'bạn là ai', 'ban la ai', 'giới thiệu', 'gioi thieu'];
+        foreach ($greetings as $g) {
+            if (strpos($text, $g) !== false || $text === trim($g)) {
+                return true;
+            }
+        }
+        return strlen($text) <= 15 && preg_match('/^(hi|hey|hello|chào|xin chào|alo|yo)$/iu', trim($text));
+    }
+
+    private function composeGreetingResponse($context) {
+        $name = $_SESSION['full_name'] ?? 'bạn';
+        $journeys = $context['user_journeys'] ?? [];
+        $journeyNote = '';
+        if (!empty($journeys)) {
+            $last = $journeys[0]['place_name'] ?? '';
+            $journeyNote = "\nMình thấy gần đây bạn có check-in tại **{$last}** — hay quá! 🎉";
+        }
+
+        return "👋 Chào {$name}! Mình là **Travel Memory AI** — trợ lý du lịch của bạn trên Travel Memory Map! 🗺️✨{$journeyNote}
+
+🚀 Mình có thể giúp bạn:
+• 🗓️ **Lập lịch trình** du lịch chi tiết (ví dụ: \"Lịch trình 3 ngày Đà Nẵng\")
+• 🧭 **Gợi ý lộ trình** di chuyển từ A đến B (ví dụ: \"Đi từ Hà Nội đến Đà Nẵng bằng gì?\")
+• 🏞️ **Tìm địa điểm đẹp**, quán ăn ngon, góc check-in sống ảo
+• 🌤️ **Dự báo thời tiết** cho điểm đến của bạn
+• ✍️ **Viết caption**, nhật ký du lịch siêu chill
+• 🍜 **Gợi ý ăn gì** tại mỗi vùng miền
+
+💬 Hãy hỏi mình bất cứ điều gì về du lịch nhé! Ví dụ:
+- \"Đà Lạt có gì vui?\" 🏔️
+- \"Ăn gì ở Hà Nội?\" 🍲
+- \"Đi từ Sài Gòn ra Nha Trang bằng gì?\" 🚗";
+    }
+
+    private function isGeneralTravelQuestion($text) {
+        $patterns = ['nên đi đâu', 'nen di dau', 'đi đâu chơi', 'di dau choi', 'gợi ý', 'goi y', 
+            'du lịch ở đâu', 'du lich o dau', 'tư vấn', 'tu van', 'nên đi', 'nen di',
+            'chỗ nào đẹp', 'cho nao dep', 'hay nhất', 'đẹp nhất', 'vui nhất', 'rẻ nhất',
+            'mùa này', 'mua nay', 'tháng này', 'thang nay', 'cuối tuần', 'cuoi tuan',
+            'đi chơi', 'di choi', 'nghỉ dưỡng', 'nghi duong', 'chill', 'phượt',
+            'ngân sách', 'budget', 'tiết kiệm', 'bao nhiêu tiền', 'chi phí'];
+        foreach ($patterns as $p) {
+            if (strpos($text, $p) !== false) return true;
+        }
+        return false;
+    }
+
+    private function composeGeneralTravelResponse($question, $context) {
+        $name = $_SESSION['full_name'] ?? 'bạn';
+        $questionLower = $this->lower($question);
+
+        // Gợi ý theo mùa/thời điểm
+        $month = intval(date('n'));
+        $seasonSuggestions = $this->getSeasonalSuggestions($month);
+
+        $parts = [];
+        $parts[] = "Chào {$name}! Câu hỏi hay đấy! 🌟 Mình sẽ tư vấn dựa trên kinh nghiệm du lịch Việt Nam nhé.";
+
+        if ($this->containsAny($questionLower, ['cuối tuần', 'cuoi tuan', '2 ngày', '2 ngay', 'ngắn ngày'])) {
+            $parts[] = "📅 **Gợi ý chuyến đi ngắn (1-2 ngày):**
+• Nếu ở miền Bắc: Sa Pa, Ninh Bình, Hạ Long, Mai Châu
+• Nếu ở miền Trung: Hội An, Huế, Bà Nà Hills
+• Nếu ở miền Nam: Đà Lạt, Vũng Tàu, Cần Thơ, Phú Quốc";
+        }
+
+        $parts[] = $seasonSuggestions;
+
+        if ($this->containsAny($questionLower, ['rẻ', 're ', 'tiết kiệm', 'tiet kiem', 'budget', 'ngân sách'])) {
+            $parts[] = "💰 **Tips tiết kiệm:**
+• Đặt phòng qua Agoda/Booking trước 2-3 tuần
+• Di chuyển bằng xe khách giường nằm đêm để tiết kiệm 1 đêm khách sạn
+• Ăn quán bình dân, chợ địa phương — vừa rẻ vừa ngon
+• Đi nhóm 4-6 người chia chi phí thuê xe, phòng";
+        }
+
+        $parts[] = "💡 **Để mình tư vấn chi tiết hơn**, bạn cho mình biết thêm:
+1. Bạn muốn đi **vùng miền nào**? (Bắc / Trung / Nam)
+2. Đi **mấy ngày**?
+3. Thích **biển, núi, ẩm thực** hay **nghỉ dưỡng**?
+4. Đi **một mình, cặp đôi** hay **nhóm bạn**?
+
+📌 Hoặc thử hỏi cụ thể hơn: \"Lịch trình 3 ngày Đà Nẵng cho cặp đôi\" để mình lập kế hoạch chi tiết nhé!";
+
+        return trim(implode("\n\n", $parts));
+    }
+
+    private function getSeasonalSuggestions($month) {
+        if ($month >= 1 && $month <= 3) {
+            return "🌸 **Tháng {$month} — Mùa xuân:**
+• Sa Pa: hoa đào, hoa mận nở rực rỡ 🌺
+• Hà Giang: ruộng bậc thang xanh mướt
+• Hội An: thời tiết dễ chịu, ít mưa
+• Đà Lạt: mai anh đào nở — thời điểm vàng!";
+        } elseif ($month >= 4 && $month <= 6) {
+            return "☀️ **Tháng {$month} — Mùa hè:**
+• Phú Quốc: nắng đẹp, biển trong vắt 🏖️
+• Quy Nhơn: biển hoang sơ, ít đông
+• Đà Nẵng – Hội An: combo biển + phố cổ
+• Cát Bà: trekking + tắm biển";
+        } elseif ($month >= 7 && $month <= 9) {
+            return "🌿 **Tháng {$month} — Mùa mưa nhẹ:**
+• Mù Cang Chải: lúa chín vàng tuyệt đẹp (tháng 9-10) 🌾
+• Ninh Bình: mùa lúa vàng Tam Cốc
+• Đà Lạt: mát mẻ, se lạnh, ít khách
+• Sài Gòn: mưa chiều xong là chill cafe ☕";
+        } else {
+            return "🍂 **Tháng {$month} — Mùa thu đông:**
+• Hà Nội: cốm, hồng, gió heo may 🍁
+• Nha Trang: cuối mùa mưa, biển đẹp dần
+• Phú Quốc: bắt đầu mùa du lịch cao điểm
+• Đà Lạt: lạnh hơn, sương mù lãng mạn";
+        }
     }
 
     private function scoreIntents($questionLower) {
@@ -493,16 +634,20 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
             ]
         ];
 
+        // Reverse geocode GPS nếu chưa biết destination
         if (!$destination && $latitude && $longitude) {
-            $reverse = $this->reverseGeocode($latitude, $longitude);
-            if ($reverse) {
-                $destination = $reverse;
-                $context['destination'] = $destination;
-                $context['display_name'] = $reverse;
-                $context['sources'][] = 'GPS reverse';
-            }
+            try {
+                $reverse = $this->reverseGeocode($latitude, $longitude);
+                if ($reverse) {
+                    $destination = $reverse;
+                    $context['destination'] = $destination;
+                    $context['display_name'] = $reverse;
+                    $context['sources'][] = 'GPS reverse';
+                }
+            } catch (Exception $e) { /* skip */ }
         }
 
+        // Curated knowledge (local, luôn hoạt động)
         $context['curated'] = $this->resolveCuratedPack($destination);
         if ($context['curated']) {
             if (!$context['lat'] && !empty($context['curated']['lat'])) {
@@ -521,42 +666,60 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
         if ($destination) {
             $context['cached_knowledge'] = $this->loadCachedKnowledge($destination);
 
-            $place = $this->fetchNominatimPlace($destination);
-            if ($place) {
-                $context['lat'] = isset($place['lat']) ? floatval($place['lat']) : $context['lat'];
-                $context['lon'] = isset($place['lon']) ? floatval($place['lon']) : $context['lon'];
-                $context['display_name'] = $place['display_name'] ?? $destination;
-                $context['sources'][] = 'OpenStreetMap/Nominatim';
-            }
+            // Nominatim — có thể bị chặn trên hosting miễn phí
+            try {
+                $place = $this->fetchNominatimPlace($destination);
+                if ($place) {
+                    $context['lat'] = isset($place['lat']) ? floatval($place['lat']) : $context['lat'];
+                    $context['lon'] = isset($place['lon']) ? floatval($place['lon']) : $context['lon'];
+                    $context['display_name'] = $place['display_name'] ?? $destination;
+                    $context['sources'][] = 'OpenStreetMap/Nominatim';
+                }
+            } catch (Exception $e) { /* skip */ }
 
-            $summary = $this->fetchWikipediaSummary($destination);
-            if ($summary) {
-                $context['summary'] = $summary;
-                $context['sources'][] = 'Wikipedia';
-            }
+            // Wikipedia — có thể bị chặn trên hosting miễn phí
+            try {
+                $summary = $this->fetchWikipediaSummary($destination);
+                if ($summary) {
+                    $context['summary'] = $summary;
+                    $context['sources'][] = 'Wikipedia';
+                }
+            } catch (Exception $e) { /* skip */ }
         }
 
         if ($context['lat'] && $context['lon']) {
-            $pois = $this->fetchOverpassPois($context['lat'], $context['lon']);
-            if (!empty($pois)) {
-                $context['pois'] = $this->mergePoiArrays($context['pois'], $pois);
-                $context['sources'][] = 'OpenStreetMap/Overpass';
-            }
+            // Overpass POIs — có thể bị chặn
+            try {
+                $pois = $this->fetchOverpassPois($context['lat'], $context['lon']);
+                if (!empty($pois)) {
+                    $context['pois'] = $this->mergePoiArrays($context['pois'], $pois);
+                    $context['sources'][] = 'OpenStreetMap/Overpass';
+                }
+            } catch (Exception $e) { /* skip */ }
 
-            $context['weather'] = $this->fetchWeatherForecast($context['lat'], $context['lon'], max(3, $days));
-            if ($context['weather']) {
-                $context['sources'][] = 'Open-Meteo';
-            }
+            // Weather — có thể bị chặn
+            try {
+                $context['weather'] = $this->fetchWeatherForecast($context['lat'], $context['lon'], max(3, $days));
+                if ($context['weather']) {
+                    $context['sources'][] = 'Open-Meteo';
+                }
+            } catch (Exception $e) { /* skip */ }
         }
 
+        // User journeys — từ DB local, luôn hoạt động
         if ($userId) {
-            $context['user_journeys'] = $this->fetchUserJourneyContext($userId);
-            if (!empty($context['user_journeys'])) {
-                $context['sources'][] = 'Hành trình của bạn';
-            }
+            try {
+                $context['user_journeys'] = $this->fetchUserJourneyContext($userId);
+                if (!empty($context['user_journeys'])) {
+                    $context['sources'][] = 'Hành trình của bạn';
+                }
+            } catch (Exception $e) { /* skip */ }
         }
 
-        $this->cacheUsefulKnowledge($destination, $context);
+        try {
+            $this->cacheUsefulKnowledge($destination, $context);
+        } catch (Exception $e) { /* skip */ }
+
         $context['sources'] = array_values(array_unique($context['sources']));
         return $context;
     }
@@ -1235,54 +1398,74 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
         return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
     }
 
-    private function httpGet($url, $timeout = 7) {
-        if (function_exists('curl_version')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'TravelMemoryMap/1.0 (local app)');
-            $result = curl_exec($ch);
-            curl_close($ch);
-            return $result;
+    private function httpGet($url, $timeout = 5) {
+        try {
+            if (function_exists('curl_init')) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'TravelMemoryMap/1.0 (local app)');
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                $result = curl_exec($ch);
+                $errno = curl_errno($ch);
+                curl_close($ch);
+                if ($errno !== 0) return null;
+                return $result ?: null;
+            }
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'header' => "User-Agent: TravelMemoryMap/1.0 (local app)\r\n",
+                    'timeout' => $timeout
+                ],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+            ]);
+
+            $result = @file_get_contents($url, false, $context);
+            return $result ?: null;
+        } catch (Exception $e) {
+            return null;
         }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => "User-Agent: TravelMemoryMap/1.0 (local app)\r\n",
-                'timeout' => $timeout
-            ]
-        ]);
-
-        return @file_get_contents($url, false, $context);
     }
 
     private function httpPost($url, $body, $headers = []) {
-        if (function_exists('curl_version')) {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-            $result = curl_exec($ch);
-            curl_close($ch);
-            return $result;
+        try {
+            if (function_exists('curl_init')) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                $result = curl_exec($ch);
+                $errno = curl_errno($ch);
+                curl_close($ch);
+                if ($errno !== 0) return null;
+                return $result ?: null;
+            }
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => implode("\r\n", $headers) . "\r\n",
+                    'content' => $body,
+                    'timeout' => 15
+                ],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+            ]);
+
+            $result = @file_get_contents($url, false, $context);
+            return $result ?: null;
+        } catch (Exception $e) {
+            return null;
         }
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers) . "\r\n",
-                'content' => $body,
-                'timeout' => 20
-            ]
-        ]);
-
-        return @file_get_contents($url, false, $context);
     }
 
     private function detectRoutePoints($question) {
