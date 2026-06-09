@@ -557,12 +557,20 @@ body {
     background: rgba(8, 12, 24, 0.92);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    z-index: 99999;
+    z-index: 2147483647 !important;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
     transition: opacity 0.3s ease;
+}
+
+/* Ensure all modals and backdrops are on top of floating controls and bottom nav */
+.modal {
+    z-index: 99999 !important;
+}
+.modal-backdrop {
+    z-index: 99998 !important;
 }
 .custom-lightbox.show {
     opacity: 1;
@@ -665,5 +673,129 @@ body {
     font-size: 32px;
     color: var(--primary, #6366f1);
     margin-bottom: 12px;
+}
+
+/* ============================================================
+   ALBUM LIGHTBOX MODAL
+   ============================================================ */
+/* Specific styling for the album lightbox modal */
+.album-lightbox .modal-content {
+    background: rgba(10, 15, 30, 0.9) !important;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Album toolbar buttons styling */
+.album-toolbar button {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    width: 38px;
+    height: 38px;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease !important;
+}
+
+.album-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #fff !important;
+    transform: scale(1.08) !important;
+}
+
+.album-toolbar button:active {
+    transform: scale(0.95) !important;
+}
+
+/* Album carousel styles */
+.album-stage {
+    position: relative;
+    width: 100%;
+}
+
+#albumCarousel {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+/* Make sure images and videos scale beautifully */
+#albumCarousel .carousel-item img,
+#albumCarousel .carousel-item video {
+    max-height: 70vh;
+    width: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    background: #000;
+}
+
+/* Thumbnail container */
+.album-thumbs {
+    display: flex !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding: 10px 4px 6px !important;
+    justify-content: center !important;
+    scrollbar-width: none !important; /* Firefox */
+}
+
+.album-thumbs::-webkit-scrollbar {
+    display: none !important; /* Chrome, Safari, Opera */
+}
+
+/* Thumbnail button wrapper */
+.album-thumb {
+    background: none !important;
+    border: 2px solid transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 58px;
+    height: 58px;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    cursor: pointer;
+    flex-shrink: 0 !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+    opacity: 0.65;
+}
+
+.album-thumb img,
+.album-thumb video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+/* Active and Hover states */
+.album-thumb:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-2px) !important;
+}
+
+.album-thumb.active {
+    border-color: #6366f1 !important; /* primary color */
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5) !important;
+    opacity: 1 !important;
+    transform: scale(1.08) translateY(-2px) !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    #albumCarousel .carousel-item img,
+    #albumCarousel .carousel-item video {
+        max-height: 60vh !important;
+    }
+    .album-thumbs {
+        justify-content: flex-start !important;
+    }
 }
 
