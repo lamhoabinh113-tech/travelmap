@@ -106,8 +106,7 @@ class LocationController {
                               OR (
                                   privacy = 'specific_friends'
                                   AND (
-                                      JSON_CONTAINS(visible_friends, CAST(:uid_json AS JSON))
-                                      OR visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                      visible_friends LIKE CONCAT('%\"', :uid, '\"%')
                                       OR visible_friends LIKE CONCAT('%', :uid, '%')
                                   )
                               )
@@ -130,8 +129,7 @@ class LocationController {
                               OR (
                                   l.privacy = 'specific_friends'
                                   AND (
-                                      JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
-                                      OR l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                      l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
                                       OR l.visible_friends LIKE CONCAT('%', :uid, '%')
                                   )
                               )
@@ -142,8 +140,7 @@ class LocationController {
                 $s_photos = $this->db->prepare($q_photos);
                 $s_photos->execute([
                     ':trip_id' => $t['id'],
-                    ':uid' => $user_id,
-                    ':uid_json' => json_encode((int)$user_id)
+                    ':uid' => $user_id
                 ]);
                 $t['photos'] = $s_photos->fetchAll(PDO::FETCH_COLUMN);
                 $trip_photos_data[$t['id']] = $t['photos'];
@@ -199,8 +196,7 @@ class LocationController {
                           OR (
                               privacy = 'specific_friends'
                               AND (
-                                  JSON_CONTAINS(visible_friends, CAST(:uid_json AS JSON))
-                                  OR visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                  visible_friends LIKE CONCAT('%\"', :uid, '\"%')
                                   OR visible_friends LIKE CONCAT('%', :uid, '%')
                               )
                           )
@@ -223,8 +219,7 @@ class LocationController {
                           OR (
                               l.privacy = 'specific_friends'
                               AND (
-                                  JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
-                                  OR l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                  l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
                                   OR l.visible_friends LIKE CONCAT('%', :uid, '%')
                               )
                           )
@@ -236,8 +231,7 @@ class LocationController {
             $stmt = $this->db->prepare($q);
             $stmt->execute([
                 ':trip_id' => $trip_id,
-                ':uid' => $user_id,
-                ':uid_json' => json_encode((int)$user_id)
+                ':uid' => $user_id
             ]);
             $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             

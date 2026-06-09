@@ -95,8 +95,7 @@ class LocationModel {
                             OR (
                                 l.privacy = 'specific_friends'
                                 AND (
-                                    JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
-                                    OR l.visible_friends LIKE CONCAT('%\"', :uid5, '\"%')
+                                    l.visible_friends LIKE CONCAT('%\"', :uid5, '\"%')
                                     OR l.visible_friends LIKE CONCAT('%', :uid6, '%')
                                 )
                             )
@@ -110,8 +109,7 @@ class LocationModel {
                 ':uid3' => $viewer_id,
                 ':uid4' => $viewer_id,
                 ':uid5' => $viewer_id,
-                ':uid6' => $viewer_id,
-                ':uid_json' => json_encode((int)$viewer_id)
+                ':uid6' => $viewer_id
             ]);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -140,8 +138,7 @@ class LocationModel {
                         OR (
                             l.privacy = 'specific_friends'
                             AND (
-                                JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
-                                OR l.visible_friends LIKE CONCAT('%\"', :uid6, '\"%')
+                                l.visible_friends LIKE CONCAT('%\"', :uid6, '\"%')
                                 OR l.visible_friends LIKE CONCAT('%', :uid7, '%')
                             )
                         )
@@ -156,8 +153,7 @@ class LocationModel {
             ':uid4' => $current_user_id,
             ':uid5' => $current_user_id,
             ':uid6' => $current_user_id,
-            ':uid7' => $current_user_id,
-            ':uid_json' => json_encode((int)$current_user_id)
+            ':uid7' => $current_user_id
         ]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -191,8 +187,7 @@ class LocationModel {
                              OR (
                                  l.privacy = 'specific_friends'
                                  AND (
-                                     JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
-                                     OR l.visible_friends LIKE CONCAT('%\"', :uid8, '\"%')
+                                     l.visible_friends LIKE CONCAT('%\"', :uid8, '\"%')
                                      OR l.visible_friends LIKE CONCAT('%', :uid9, '%')
                                  )
                              )
@@ -209,8 +204,7 @@ class LocationModel {
             ':uid6' => $user_id,
             ':uid7' => $user_id,
             ':uid8' => $user_id,
-            ':uid9' => $user_id,
-            ':uid_json' => json_encode((int)$user_id)
+            ':uid9' => $user_id
         ]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
