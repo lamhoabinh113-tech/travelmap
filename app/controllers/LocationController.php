@@ -452,6 +452,7 @@ class LocationController {
             $visible_friends = json_encode(array_map('intval', $data['visible_friends']));
         }
         $album_name = isset($data['album_name']) && trim($data['album_name']) !== '' ? trim($data['album_name']) : "Nhật ký - " . date('d/m/Y');
+        $trip_id = isset($data['trip_id']) && is_numeric($data['trip_id']) ? intval($data['trip_id']) : null;
 
         // Xử lý base64 image
         if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $type)) {
@@ -486,8 +487,8 @@ class LocationController {
         try {
             // Xem có location nào tạo hôm nay với tên này không, nếu muốn gom nhóm
             // Nhưng hiện tại mỗi cái đăng mới ta tạo 1 marker cho Locket-style.
-            $query = "INSERT INTO locations (user_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, created_at) 
-                      VALUES (:uid, :pname, :lat, :lng, :desc, 'Hạnh phúc', :img, CURDATE(), :privacy, :visible_friends, NOW())";
+            $query = "INSERT INTO locations (user_id, place_name, latitude, longitude, description, feeling, image, visit_date, privacy, visible_friends, trip_id, created_at) 
+                      VALUES (:uid, :pname, :lat, :lng, :desc, 'Hạnh phúc', :img, CURDATE(), :privacy, :visible_friends, :trip_id, NOW())";
             $stmt = $this->db->prepare($query);
             $stmt->execute([
                 ':uid' => $user_id,
@@ -497,7 +498,8 @@ class LocationController {
                 ':desc' => $caption,
                 ':img' => $file_name,
                 ':privacy' => $privacy,
-                ':visible_friends' => $visible_friends
+                ':visible_friends' => $visible_friends,
+                ':trip_id' => $trip_id
             ]);
             $location_id = $this->db->lastInsertId();
 

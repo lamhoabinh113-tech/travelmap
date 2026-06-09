@@ -341,6 +341,14 @@
                             <div class="fw-bold fs-6"><?php echo count($locations); ?> điểm</div>
                         </div>
                     </div>
+                    <div class="d-flex gap-2 mt-3 pt-3 border-top border-white border-opacity-25">
+                        <button class="btn btn-sm btn-light rounded-pill flex-fill fw-bold text-primary" style="font-size:11px;" onclick="openCameraForTrip(<?php echo $current_trip['id']; ?>, <?php echo htmlspecialchars(json_encode($current_trip['title']), ENT_QUOTES, 'UTF-8'); ?>)">
+                            <i class="bi bi-camera-fill me-1"></i> Chụp Locket
+                        </button>
+                        <button class="btn btn-sm btn-light rounded-pill flex-fill fw-bold text-success" style="font-size:11px;" onclick="addMemoryForTrip(<?php echo $current_trip['id']; ?>)">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm Check-in
+                        </button>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -507,6 +515,14 @@
                                     <?php else: ?>
                                         <span class="badge bg-secondary text-white" style="font-size:10px;"><i class="bi bi-people-fill"></i> Chung</span>
                                     <?php endif; ?>
+                                </div>
+                                <div class="d-flex gap-2 mt-3 border-top pt-2" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill flex-fill" style="font-size:11px;" onclick="openCameraForTrip(<?php echo $t['id']; ?>, <?php echo htmlspecialchars(json_encode($t['title']), ENT_QUOTES, 'UTF-8'); ?>)">
+                                        <i class="bi bi-camera-fill me-1"></i> Chụp Locket
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success rounded-pill flex-fill" style="font-size:11px;" onclick="addMemoryForTrip(<?php echo $t['id']; ?>)">
+                                        <i class="bi bi-plus-lg me-1"></i> Thêm Check-in
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1748,6 +1764,7 @@
     let capturedPhotoBase64 = null;
     let locketLat = null;
     let locketLng = null;
+    let locketTripId = null;
 
     async function openLocketCamera() {
         document.getElementById('locketCameraUI').style.display = 'flex';
@@ -1772,6 +1789,7 @@
             cameraStream = null;
             videoElem.srcObject = null;
         }
+        locketTripId = null;
     }
 
     async function startCamera(facingMode) {
@@ -1936,7 +1954,8 @@
                 lat: locketLat,
                 lng: locketLng,
                 privacy: privacy,
-                album_name: albumName // Nếu rỗng, tự động lấy ngày
+                album_name: albumName, // Nếu rỗng, tự động lấy ngày
+                trip_id: locketTripId  // Truyền trip_id liên kết với chuyến đi
             })
         })
         .then(res => res.json())
@@ -2584,6 +2603,26 @@
 
     // Initialize lightbox on load
     document.addEventListener('DOMContentLoaded', initLightbox);
+
+    // Trip Action Helpers
+    function openCameraForTrip(tripId, tripTitle) {
+        locketTripId = tripId;
+        openLocketCamera();
+        const locketCaption = document.getElementById('locketCaption');
+        if (locketCaption) {
+            locketCaption.placeholder = `Chụp ảnh cho chuyến đi: ${tripTitle}...`;
+        }
+    }
+
+    function addMemoryForTrip(tripId) {
+        const selectEl = document.querySelector('#addMemoryModal select[name="trip_id"]');
+        if (selectEl) {
+            selectEl.value = tripId;
+            selectEl.dispatchEvent(new Event('change'));
+        }
+        var addModal = new bootstrap.Modal(document.getElementById('addMemoryModal'));
+        addModal.show();
+    }
     </script>
     
 </body>
