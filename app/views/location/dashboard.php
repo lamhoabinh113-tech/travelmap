@@ -201,6 +201,64 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        
+        /* Map Filter Pills */
+        .filter-pill {
+            transition: all 0.2s ease;
+            border: 1px solid transparent !important;
+        }
+        .filter-pill.active {
+            background-color: #6366f1 !important;
+            color: #ffffff !important;
+            border-color: #6366f1 !important;
+        }
+        
+        /* Achievements Badges CSS */
+        .badge-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+            gap: 12px;
+            justify-content: center;
+        }
+        .achievement-badge-item {
+            background: rgba(255, 255, 255, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+        }
+        .achievement-badge-item.locked {
+            opacity: 0.55;
+            background: rgba(0, 0, 0, 0.05);
+            filter: grayscale(100%);
+        }
+        .achievement-badge-item.unlocked {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 211, 238, 0.1));
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+        }
+        .achievement-badge-item:hover {
+            transform: translateY(-4px) scale(1.05);
+        }
+        .achievement-badge-item.unlocked:hover {
+            animation: bounceShake 0.5s ease-in-out;
+        }
+        @keyframes bounceShake {
+            0%, 100% { transform: translateY(-4px) rotate(0deg); }
+            20% { transform: translateY(-6px) rotate(-3deg); }
+            40% { transform: translateY(-2px) rotate(3deg); }
+            60% { transform: translateY(-5px) rotate(-1.5deg); }
+            80% { transform: translateY(-3px) rotate(1.5deg); }
+        }
+        .badge-locked-overlay {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 10px;
+            color: #94a3b8;
+        }
     </style>
     
     <!-- PWA Support -->
@@ -346,6 +404,26 @@
     <div class="map-section">
         <div id="map"></div>
         
+        <!-- Map Filter Bar -->
+        <div class="map-filter-bar px-3 py-2 rounded-pill shadow d-flex align-items-center gap-2 overflow-auto" style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255,255,255,0.45); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.25); max-width: 90%; scrollbar-width: none;">
+            <span class="small fw-bold text-muted text-nowrap d-none d-md-inline"><i class="bi bi-funnel-fill text-primary"></i> Lọc bản đồ:</span>
+            <button class="btn btn-xs btn-light rounded-pill px-3 py-1 active shadow-sm filter-pill" onclick="applyMapFilter('all', '', this)" style="font-size: 10px; font-weight: bold;">Tất cả</button>
+            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Hạnh phúc', this)" style="font-size: 10px;">😊 Hạnh phúc</button>
+            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Tuyệt vời', this)" style="font-size: 10px;">🤩 Tuyệt vời</button>
+            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Bình yên', this)" style="font-size: 10px;">🧘 Bình yên</button>
+            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Thú vị', this)" style="font-size: 10px;">🎈 Thú vị</button>
+            
+            <?php if(!empty($trips)): ?>
+                <div class="vr mx-1"></div>
+                <select id="mapTripFilter" class="form-select form-select-sm rounded-pill" onchange="applyMapFilter('trip', this.value)" style="font-size: 9px; padding: 2px 20px 2px 10px; border: none; background-color: rgba(255,255,255,0.85); font-weight: bold; width: auto; max-width: 120px;">
+                    <option value="">-- Theo Chuyến đi --</option>
+                    <?php foreach($trips as $t): ?>
+                        <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            <?php endif; ?>
+        </div>
+        
         <!-- Profile Badge -->
         <div class="profile-badge" data-bs-toggle="modal" data-bs-target="#profileModal" style="cursor: pointer;">
             <div class="avatar-placeholder" style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: #ddd; color: #555;">
@@ -373,6 +451,7 @@
         <div class="map-mode-pill">
             <button type="button" class="active" id="darkMapBtn" onclick="setMapTheme('dark')" title="Bản đồ tối"><i class="bi bi-moon-stars-fill"></i></button>
             <button type="button" id="lightMapBtn" onclick="setMapTheme('light')" title="Bản đồ sáng"><i class="bi bi-brightness-high-fill"></i></button>
+            <button type="button" id="satelliteMapBtn" onclick="setMapTheme('satellite')" title="Bản đồ vệ tinh"><i class="bi bi-globe"></i></button>
             <button type="button" class="active" id="followLocationBtn" onclick="toggleFollowLocation()" title="Theo dõi vị trí thực tế"><i class="bi bi-crosshair"></i></button>
             <button type="button" onclick="refreshMyLocation()" title="Định vị lại (GPS chính xác)"><i class="bi bi-arrow-clockwise"></i></button>
             <button type="button" onclick="window.location.href='index.php?url=auth/logout'" title="Đăng xuất" style="background: rgba(239, 68, 68, 0.8);"><i class="bi bi-box-arrow-right"></i></button>
@@ -1056,7 +1135,7 @@
 
                 <div class="text-start">
                     <h6 class="fw-bold small text-muted mb-3"><i class="bi bi-award-fill me-2 text-warning"></i> CÁC MỐC DANH HIỆU</h6>
-                    <ul class="list-group list-group-flush small">
+                    <ul class="list-group list-group-flush small mb-3">
                         <li class="list-group-item bg-transparent d-flex justify-content-between px-0 <?php echo $xp < 100 ? 'fw-bold text-primary' : ''; ?>">
                             <span><i class="bi <?php echo $xp >= 0 ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'; ?> me-2"></i> Explorer Lv.1</span>
                             <span class="text-muted">0 XP</span>
@@ -1074,6 +1153,38 @@
                             <span class="text-muted">1000 XP</span>
                         </li>
                     </ul>
+                </div>
+
+                <div class="text-start mt-3 pt-3 border-top">
+                    <h6 class="fw-bold small text-muted mb-3"><i class="bi bi-patch-check-fill me-2 text-primary"></i> HUY CHƯƠNG THÀNH TỰU</h6>
+                    <div class="badge-grid-container" id="badgesGrid">
+                        <!-- Badges will be generated dynamically by JavaScript -->
+                        <div class="achievement-badge-item text-center p-2 locked" id="badge-explorer" title="Nhà thám hiểm (Check-in 3+ địa điểm)">
+                            <div class="badge-icon fs-3">🧭</div>
+                            <div style="font-size: 8px; font-weight: bold;" class="text-truncate mt-1">Thám Hiểm</div>
+                            <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                        <div class="achievement-badge-item text-center p-2 locked" id="badge-locket" title="Thánh Locket (Đăng 3+ locket)">
+                            <div class="badge-icon fs-3">📸</div>
+                            <div style="font-size: 8px; font-weight: bold;" class="text-truncate mt-1">Locket Master</div>
+                            <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                        <div class="achievement-badge-item text-center p-2 locked" id="badge-night" title="Cú Đêm (Check-in sau 22h tối)">
+                            <div class="badge-icon fs-3">🦉</div>
+                            <div style="font-size: 8px; font-weight: bold;" class="text-truncate mt-1">Cú Đêm</div>
+                            <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                        <div class="achievement-badge-item text-center p-2 locked" id="badge-climber" title="Chinh Phục Đèo Dốc (Check-in tại Núi/Đèo/Sapa...)">
+                            <div class="badge-icon fs-3">⛰️</div>
+                            <div style="font-size: 8px; font-weight: bold;" class="text-truncate mt-1">Leo Núi</div>
+                            <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                        <div class="achievement-badge-item text-center p-2 locked" id="badge-triky" title="Tri Kỷ Hành Trình (Có ít nhất 1 bạn bè)">
+                            <div class="badge-icon fs-3">🤝</div>
+                            <div style="font-size: 8px; font-weight: bold;" class="text-truncate mt-1">Tri Kỷ</div>
+                            <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1489,6 +1600,10 @@
         light: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
             attribution: '&copy; Google Maps',
             maxZoom: 20
+        }),
+        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
         })
     };
     let activeMapLayer = mapLayers.light.addTo(map);
@@ -1650,12 +1765,15 @@
         activeMapLayer = mapLayers[theme].addTo(map);
         document.getElementById('darkMapBtn').classList.toggle('active', theme === 'dark');
         document.getElementById('lightMapBtn').classList.toggle('active', theme === 'light');
+        if (document.getElementById('satelliteMapBtn')) {
+            document.getElementById('satelliteMapBtn').classList.toggle('active', theme === 'satellite');
+        }
         
         // Toggle Global UI Theme
         if (theme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem('uiTheme', 'dark');
-        } else {
+        } else if (theme === 'light') {
             document.documentElement.removeAttribute('data-theme');
             localStorage.setItem('uiTheme', 'light');
         }
@@ -3076,6 +3194,167 @@
     // LOCKET & BUMP INTERACTIVE UPGRADES
     // ==========================================
 
+    // 5. Travel Stats & Achievements Badges Logic
+    const friendsCount = <?php echo count($friends ?? []); ?>;
+
+    function calculateAchievements() {
+        if (!savedLocations) return;
+
+        // a. Explorer Badge (3+ checkins)
+        const badgeExplorer = document.getElementById('badge-explorer');
+        if (badgeExplorer) {
+            if (savedLocations.length >= 3) {
+                badgeExplorer.classList.remove('locked');
+                badgeExplorer.classList.add('unlocked');
+                const lockIcon = badgeExplorer.querySelector('.badge-locked-overlay');
+                if (lockIcon) lockIcon.remove();
+            }
+        }
+
+        // b. Locket Master Badge (3+ lockets)
+        const badgeLocket = document.getElementById('badge-locket');
+        if (badgeLocket) {
+            const locketCount = savedLocations.filter(loc => loc.image && loc.image.includes('_locket_')).length;
+            if (locketCount >= 3) {
+                badgeLocket.classList.remove('locked');
+                badgeLocket.classList.add('unlocked');
+                const lockIcon = badgeLocket.querySelector('.badge-locked-overlay');
+                if (lockIcon) lockIcon.remove();
+            }
+        }
+
+        // c. Night Owl Badge (Check-in between 22:00 and 05:00)
+        const badgeNight = document.getElementById('badge-night');
+        if (badgeNight) {
+            let hasNight = false;
+            savedLocations.forEach(loc => {
+                if (loc.created_at) {
+                    const match = loc.created_at.match(/\s(\d{2}):/);
+                    if (match) {
+                        const hour = parseInt(match[1]);
+                        if (hour >= 22 || hour < 5) hasNight = true;
+                    }
+                }
+            });
+            if (hasNight) {
+                badgeNight.classList.remove('locked');
+                badgeNight.classList.add('unlocked');
+                const lockIcon = badgeNight.querySelector('.badge-locked-overlay');
+                if (lockIcon) lockIcon.remove();
+            }
+        }
+
+        // d. Alpinist Climber Badge (Mountain, Pass, etc.)
+        const badgeClimber = document.getElementById('badge-climber');
+        if (badgeClimber) {
+            const hasClimbed = savedLocations.some(loc => {
+                const place = (loc.place_name || '').toLowerCase();
+                const desc = (loc.description || '').toLowerCase();
+                const keywords = ['núi', 'đèo', 'đỉnh', 'dốc', 'sapa', 'hà giang', 'fansipan', 'mã pí lèng', 'khau phạ', 'ô quy hồ', 'tây bắc'];
+                const keywordsMatches = keywords.some(k => place.includes(k) || desc.includes(k));
+                return keywordsMatches || loc.feeling === 'Khám phá';
+            });
+            if (hasClimbed) {
+                badgeClimber.classList.remove('locked');
+                badgeClimber.classList.add('unlocked');
+                const lockIcon = badgeClimber.querySelector('.badge-locked-overlay');
+                if (lockIcon) lockIcon.remove();
+            }
+        }
+
+        // e. Companion Badge (1+ friends)
+        const badgeTriky = document.getElementById('badge-triky');
+        if (badgeTriky) {
+            if (friendsCount >= 1) {
+                badgeTriky.classList.remove('locked');
+                badgeTriky.classList.add('unlocked');
+                const lockIcon = badgeTriky.querySelector('.badge-locked-overlay');
+                if (lockIcon) lockIcon.remove();
+            }
+        }
+    }
+
+    // 6. Interactive Map Filtering & Polyline Redrawing
+    function applyMapFilter(type, value, element = null) {
+        if (type === 'all' || type === 'feeling') {
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const btns = Array.from(document.querySelectorAll('.filter-pill'));
+                const matched = btns.find(b => b.innerText.includes(value) || (value === '' && b.innerText === 'Tất cả'));
+                if (matched) matched.classList.add('active');
+            }
+            const selectFilter = document.getElementById('mapTripFilter');
+            if (selectFilter) selectFilter.value = '';
+        } else if (type === 'trip') {
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            const allBtn = Array.from(document.querySelectorAll('.filter-pill')).find(b => b.innerText === 'Tất cả');
+            if (allBtn && value === '') allBtn.classList.add('active');
+        }
+
+        let boundsPoints = [];
+        const combinedLocations = savedLocations.concat(friendLocations);
+
+        combinedLocations.forEach(loc => {
+            const marker = markers[loc.id];
+            if (!marker) return;
+
+            let show = false;
+            if (type === 'all' || (type === 'trip' && value === '')) {
+                show = true;
+            } else if (type === 'feeling' && loc.feeling === value) {
+                show = true;
+            } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
+                show = true;
+            }
+
+            if (show) {
+                if (!map.hasLayer(marker)) {
+                    marker.addTo(map);
+                }
+                boundsPoints.push([loc.latitude, loc.longitude]);
+            } else {
+                if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            }
+        });
+
+        if (routeLine) {
+            map.removeLayer(routeLine);
+            routeLine = null;
+        }
+
+        const visibleOwnPoints = savedLocations
+            .filter(loc => {
+                let show = false;
+                if (type === 'all' || (type === 'trip' && value === '')) {
+                    show = true;
+                } else if (type === 'feeling' && loc.feeling === value) {
+                    show = true;
+                } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
+                    show = true;
+                }
+                return show;
+            })
+            .map(loc => [loc.latitude, loc.longitude]);
+
+        if (visibleOwnPoints.length >= 2) {
+            routeLine = L.polyline(visibleOwnPoints, {
+                color: '#6366f1',
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 15',
+                className: 'marching-ants-path'
+            }).addTo(map);
+        }
+
+        if (boundsPoints.length > 0) {
+            map.fitBounds(boundsPoints, { padding: [50, 50], maxZoom: 16 });
+        }
+    }
+
     // 1. Leaflet Marker Ripple
     function triggerBumpRipple(lat, lng) {
         if (!map) return;
@@ -3688,6 +3967,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         initLightbox();
         initCardSwipe();
+        calculateAchievements();
         
         // Focus on the newly posted check-in after reload if any
         const justPosted = sessionStorage.getItem('just_posted_loc');
