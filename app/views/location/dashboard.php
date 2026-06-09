@@ -364,7 +364,7 @@
 
                 <?php foreach($locations as $index => $loc): ?>
                     <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
-                        <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, '<?php echo addslashes($loc['place_name']); ?>')">
+                        <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, <?php echo htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8'); ?>)">
                             <?= renderMedia($loc['image'], 160) ?>
                             <?php if($loc['image']): ?>
                                 <?php $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION)); ?>
@@ -382,7 +382,7 @@
                             <h6 class="fw-bold mb-1"><?php echo htmlspecialchars($loc['place_name']); ?></h6>
                             <?php if(!isset($is_friend_view)): ?>
                             <div class="d-flex gap-2">
-                                <a href="javascript:void(0)" class="text-primary opacity-50" onclick='event.stopPropagation(); openEditModal(<?php echo json_encode($loc); ?>)'><i class="bi bi-pencil-square"></i></a>
+                                <a href="javascript:void(0)" class="text-primary opacity-50" onclick="event.stopPropagation(); openEditModal(<?php echo htmlspecialchars(json_encode($loc), ENT_QUOTES, 'UTF-8'); ?>)"><i class="bi bi-pencil-square"></i></a>
                                 <a href="index.php?url=location/delete&id=<?php echo $loc['id']; ?>" class="text-danger opacity-50" onclick="event.stopPropagation(); return confirm('Xóa kỷ niệm này?')"><i class="bi bi-trash"></i></a>
                             </div>
                             <?php endif; ?>
@@ -465,7 +465,7 @@
                 foreach($locations as $loc) {
                     if(!empty($loc['image'])) {
                         $has_images = true;
-                        echo '<div class="album-cell" onclick="openAlbum('.$loc['id'].', \''.htmlspecialchars(addslashes($loc['place_name'])).'\')">';
+                        echo '<div class="album-cell" onclick="openAlbum('.$loc['id'].', '.htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8').')">';
                         echo renderMedia($loc['image'], 120, 'album');
                         echo '</div>';
                     }
@@ -578,7 +578,7 @@
                                         <div class="text-muted" style="font-size:10px;">@<?php echo htmlspecialchars($f['username']); ?></div>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-primary rounded-pill" style="font-size:11px;" onclick="sendTripInvite('<?php echo addslashes($f['username']); ?>')">
+                                <button class="btn btn-sm btn-primary rounded-pill" style="font-size:11px;" onclick="sendTripInvite(<?php echo htmlspecialchars(json_encode($f['username']), ENT_QUOTES, 'UTF-8'); ?>)">
                                     Mời
                                 </button>
                             </div>
@@ -1136,14 +1136,14 @@
         
         var popupContent = `
             <div class="p-2" style="width: 240px">
-                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer">` : ''}
+                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer">` : ''}
                 <h6 class="fw-bold mb-1">${loc.place_name}</h6>
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
                     <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling}</span>
                 </div>
                 <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
-                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))">Xem Album</button>
+                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">Xem Album</button>
             </div>
         `;
         
@@ -1176,14 +1176,14 @@
                         <div class="text-muted" style="font-size:11px;">@${loc.username || ''}</div>
                     </div>
                 </div>
-                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
+                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
                 <h6 class="fw-bold mb-1">${loc.place_name}</h6>
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
                     <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling || ''}</span>
                 </div>
                 <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
-                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album')}'))">
+                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">
                     <i class="bi bi-images me-1"></i> Xem album
                 </button>
             </div>
