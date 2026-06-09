@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+    <script>
+        // Global error catcher to display JS errors directly on screen for debugging
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.top = '10px';
+            errorDiv.style.left = '10px';
+            errorDiv.style.right = '10px';
+            errorDiv.style.background = 'rgba(239, 68, 68, 0.95)';
+            errorDiv.style.color = 'white';
+            errorDiv.style.padding = '15px';
+            errorDiv.style.borderRadius = '10px';
+            errorDiv.style.zIndex = '999999';
+            errorDiv.style.fontSize = '12px';
+            errorDiv.style.fontFamily = 'monospace';
+            errorDiv.style.whiteSpace = 'pre-wrap';
+            errorDiv.innerHTML = `<strong>JS Error:</strong> ${message}<br>at ${source}:${lineno}:${colno}`;
+            document.body.appendChild(errorDiv);
+            return false;
+        };
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hành Trình Của Bạn - Travel Memory Map</title>
@@ -11,7 +32,75 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=3.6">
+    <style>
+        /* Force styling for Leaflet Custom Markers */
+        .custom-map-marker {
+            position: relative !important;
+            width: 48px !important;
+            height: 48px !important;
+            border-radius: 50% !important;
+            background: white !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            overflow: visible !important;
+        }
+        .custom-map-marker:hover {
+            transform: scale(1.2) translateY(-6px) !important;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24) !important;
+        }
+        .custom-marker-img {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+        .custom-marker-feeling-badge {
+            position: absolute !important;
+            bottom: -2px !important;
+            right: -2px !important;
+            background: white !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 11px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            z-index: 10 !important;
+        }
+        .custom-marker-user-badge {
+            position: absolute !important;
+            top: -2px !important;
+            left: -2px !important;
+            width: 18px !important;
+            height: 18px !important;
+            border-radius: 50% !important;
+            border: 1.5px solid white !important;
+            object-fit: cover !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+            z-index: 10 !important;
+        }
+        .custom-marker-pulse {
+            position: absolute !important;
+            inset: -6px !important;
+            border-radius: 50% !important;
+            border: 2px solid #6366f1 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            animation: customMarkerPulse 2.5s infinite !important;
+        }
+        @keyframes customMarkerPulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+    </style>
     
     <!-- PWA Support -->
     <link rel="manifest" href="manifest.json">
@@ -36,7 +125,7 @@
     <!-- Script forcing HTTPS removed to allow local network IP access -->
     
     
-    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.3">
+    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.6">
 </head>
 <body>
 <?php
