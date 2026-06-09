@@ -100,40 +100,84 @@
             0% { transform: scale(0.9); opacity: 0.6; }
             100% { transform: scale(1.4); opacity: 0; }
         }
-        /* Collage Grid CSS */
-        .collage-grid.collage-1 {
-            grid-template-columns: 1fr;
+        /* Locket Mini Widget CSS */
+        .locket-mini-widget {
+            background: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08) !important;
         }
-        .collage-grid.collage-2 {
-            grid-template-columns: 1fr 1fr;
+        .btn-circle {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .collage-grid.collage-3 {
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr;
-        }
-        .collage-grid.collage-4 {
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr 1fr;
-        }
-        .collage-item {
+        
+        /* Locket Card Stack CSS */
+        .locket-stack-container {
+            perspective: 800px;
             position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            background: #000;
         }
-        .collage-item img, .collage-item video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
+        .locket-stack-card {
+            background: #ffffff !important;
+            border: 6px solid #ffffff !important;
+            border-bottom: 26px solid #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
+            transform-origin: center center;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) !important;
         }
-        .collage-item:hover img, .collage-item:hover video {
-            transform: scale(1.05);
-        }
-        .collage-overlay {
-            background: rgba(0, 0, 0, 0.5);
-            font-size: 1.25rem;
+        
+        /* Floating Emoji CSS */
+        .floating-emoji {
+            position: fixed;
             pointer-events: none;
+            z-index: 9999;
+            opacity: 1;
+            transform: translate(-50%, -50%);
+            animation: emojiFloatUp 1.2s cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+        }
+        @keyframes emojiFloatUp {
+            0% {
+                transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -100%) scale(1) rotate(0deg);
+            }
+            100% {
+                transform: translate(calc(-50% + var(--drift)), -250px) scale(0.8) rotate(var(--rotate));
+                opacity: 0;
+            }
+        }
+        
+        /* Leaflet Marker Ripple CSS */
+        .leaflet-marker-ripple {
+            width: 40px;
+            height: 40px;
+            margin-left: -20px;
+            margin-top: -20px;
+            border-radius: 50%;
+            border: 3px solid #6366f1;
+            background: rgba(99, 102, 241, 0.2);
+            animation: rippleWave 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            pointer-events: none;
+        }
+        @keyframes rippleWave {
+            0% {
+                transform: scale(0.2);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(3.5);
+                opacity: 0;
+            }
         }
         .hover-bg-light:hover {
             background-color: rgba(0, 0, 0, 0.05) !important;
@@ -420,6 +464,54 @@
             </div>
 
             <div class="journey-timeline">
+                <?php if (!isset($is_friend_view)): ?>
+                <!-- Locket Mini Widget -->
+                <div class="locket-mini-widget p-3 rounded-4 border mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Circular camera widget preview -->
+                        <div class="locket-preview-circle border border-3 border-primary shadow" style="width: 70px; height: 70px; border-radius: 50%; overflow: hidden; flex-shrink: 0; position: relative; background: #111; cursor: pointer;" onclick="toggleLocketWidgetCamera()">
+                            <video id="widgetVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; display: none; transform: scaleX(-1);"></video>
+                            <canvas id="widgetCanvas" style="display: none;"></canvas>
+                            <div id="widgetPlaceholder" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white text-opacity-75">
+                                <i class="bi bi-camera-fill fs-4 text-primary"></i>
+                                <span style="font-size: 8px; font-weight: bold; text-transform: uppercase;">Locket</span>
+                            </div>
+                            <img id="widgetCapturedImg" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        </div>
+                        
+                        <!-- Details -->
+                        <div class="flex-grow-1 overflow-hidden" id="widgetControls">
+                            <h6 class="fw-bold mb-1" style="font-size: 13px;">Chụp nhanh Locket!</h6>
+                            <p class="text-muted mb-0 small text-truncate">Chạm ống kính tròn để bật camera</p>
+                        </div>
+                        
+                        <!-- Panel control buttons -->
+                        <div class="d-flex flex-column gap-2 align-items-end" id="widgetActionPanel" style="display: none !important;">
+                            <button class="btn btn-sm btn-primary rounded-circle btn-circle" id="widgetSnapBtn" onclick="snapWidgetPhoto()" title="Chụp"><i class="bi bi-camera"></i></button>
+                            <button class="btn btn-sm btn-success rounded-circle btn-circle" id="widgetPostBtn" onclick="postWidgetLocket()" style="display: none;" title="Đăng"><i class="bi bi-send-fill"></i></button>
+                            <button class="btn btn-sm btn-danger rounded-circle btn-circle" id="widgetResetBtn" onclick="resetWidgetLocket()" style="display: none;" title="Chụp lại"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        </div>
+                    </div>
+                    
+                    <!-- Caption & Trip choice overlay -->
+                    <div class="mt-2" id="widgetCaptionArea" style="display: none;">
+                        <div class="position-relative mb-2">
+                            <input type="text" id="widgetCaptionInput" class="form-control form-control-sm rounded-pill text-center bg-black text-white" placeholder="Viết chú thích trên ảnh..." style="border: none; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.85) !important;">
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="widgetTripId" class="form-select form-select-sm rounded-pill" style="font-size: 11px;">
+                                <option value="">-- Check-in tự do --</option>
+                                <?php if(!empty($trips)): ?>
+                                    <?php foreach($trips as $t): ?>
+                                        <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <?php
                 // Group check-ins and prepare timeline items
                 $timeline_items = [];
@@ -603,53 +695,32 @@
                                 <p class="small text-secondary mb-3 text-truncate"><?php echo htmlspecialchars($item['description']); ?></p>
                             <?php endif; ?>
 
-                            <!-- Photos Collage Grid -->
+                            <!-- Photos Tinder Stack -->
                             <?php 
                             $photos = $trip_photos_data[$item['trip_id']] ?? [];
                             $photo_count = count($photos);
                             if ($photo_count > 0): 
                             ?>
-                                <div class="collage-grid collage-<?php echo min(4, $photo_count); ?> mb-3 rounded-4 overflow-hidden shadow-sm" style="height: 200px; display: grid; gap: 4px;">
-                                    <?php if ($photo_count == 1): ?>
-                                        <div class="collage-item w-100 h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
+                                <div class="locket-stack-container mb-3 position-relative" style="height: 250px; margin-top: 15px; margin-bottom: 25px;" data-trip-id="<?php echo $item['trip_id']; ?>">
+                                    <?php 
+                                    foreach ($photos as $idx => $photo_path): 
+                                        if ($idx >= 4) continue; // visually stack up to 4 cards
+                                        $z_index = $photo_count - $idx;
+                                        $offset_y = $idx * 6;
+                                        $scale = 1 - ($idx * 0.04);
+                                        $rot = ($idx % 2 == 0 ? 1 : -1) * min(3, $idx * 1.5);
+                                    ?>
+                                        <div class="locket-stack-card position-absolute w-100 h-100 rounded-4 overflow-hidden shadow cursor-grab d-flex flex-column" 
+                                             style="z-index: <?php echo $z_index; ?>; transform: translateY(<?php echo $offset_y; ?>px) scale(<?php echo $scale; ?>) rotate(<?php echo $rot; ?>deg); touch-action: none;"
+                                             data-index="<?php echo $idx; ?>">
+                                             <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" class="w-100 h-100 object-fit-cover rounded-2" style="pointer-events: none;">
+                                             <?php if ($idx == 0 && $photo_count > 1): ?>
+                                                 <div class="position-absolute bg-black bg-opacity-75 text-white px-2 py-1 rounded-pill d-flex align-items-center gap-1" style="font-size: 9px; pointer-events: none; opacity: 0.85; bottom: -20px; left: 50%; transform: translateX(-50%); z-index: 5;">
+                                                     <i class="bi bi-hand-index-thumb-fill text-warning"></i> Vuốt để lật ảnh
+                                                 </div>
+                                             <?php endif; ?>
                                         </div>
-                                    <?php elseif ($photo_count == 2): ?>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                    <?php elseif ($photo_count == 3): ?>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')" style="grid-column: span 2; grid-row: span 2;">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 2, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[2]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                    <?php else: // 4 or more ?>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')" style="grid-column: span 2; grid-row: span 2;">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 2, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[2]); ?>" class="w-100 h-100 object-fit-cover">
-                                        </div>
-                                        <div class="collage-item h-100 position-relative" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 3, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
-                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[3]); ?>" class="w-100 h-100 object-fit-cover">
-                                            <?php if ($photo_count > 4): ?>
-                                                <div class="collage-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-black bg-opacity-50 text-white fw-bold">
-                                                    +<?php echo ($photo_count - 4); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                    <?php endforeach; ?>
                                 </div>
                             <?php else: ?>
                                 <div class="border border-dashed rounded-4 p-4 text-center text-muted mb-3 bg-light bg-opacity-50">
@@ -1466,6 +1537,9 @@
         });
 
         var marker = L.marker([loc.latitude, loc.longitude], { icon: customIcon }).addTo(map);
+        marker.on('click', function(e) {
+            triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+        });
         
         var popupContent = `
             <div class="p-2" style="width: 240px">
@@ -1498,6 +1572,9 @@
         });
 
         var friendMarker = L.marker([loc.latitude, loc.longitude], { icon: friendIcon }).addTo(map);
+        friendMarker.on('click', function(e) {
+            triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+        });
         var friendPopup = `
             <div class="p-2" style="width: 250px">
                 <div class="d-flex align-items-center gap-2 mb-2">
@@ -1896,6 +1973,7 @@
         map.flyTo([lat, lng], 16, {
             duration: 1.5
         });
+        triggerBumpRipple(lat, lng);
         
         if (openPopup) {
             savedLocations.concat(friendLocations).forEach(loc => {
@@ -1914,6 +1992,7 @@
         map.flyTo([loc.latitude, loc.longitude], 16, {
             duration: 1.5
         });
+        triggerBumpRipple(loc.latitude, loc.longitude);
         setTimeout(() => marker.openPopup(), 1500);
     }
 
@@ -2333,6 +2412,8 @@
         document.getElementById('postControls').style.display = 'none';
         document.getElementById('locketCaption').value = '';
         capturedPhotoBase64 = null;
+        const overlay = document.getElementById('modalTextOverlay');
+        if (overlay) overlay.remove();
     }
 
     function postLocketPhoto(albumName = '') {
@@ -2386,6 +2467,9 @@
                 });
                 
                 var marker = L.marker([locketLat, locketLng], { icon: photoIcon }).addTo(map);
+                marker.on('click', function(e) {
+                    triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+                });
                 marker.bindPopup(`
                     <div class="p-2 text-center" style="width: 240px">
                         <img src="${data.image_url}" class="img-fluid rounded-3 mb-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
@@ -2782,6 +2866,9 @@
                     else if (data.type === 'haha') { iconHtml = '😂'; color = '#f59e0b'; }
                     else if (data.type === 'wow') { iconHtml = '😮'; color = '#f59e0b'; }
                     else if (data.type === 'sad') { iconHtml = '😢'; color = '#f59e0b'; }
+                    
+                    // Trigger emoji burst animation
+                    createEmojiBurst(btnElement, data.type);
                 }
 
                 iconSpan.innerHTML = iconHtml;
@@ -3011,8 +3098,614 @@
         updateLightboxContent();
     }
 
-    // Initialize lightbox on load
-    document.addEventListener('DOMContentLoaded', initLightbox);
+    // ==========================================
+    // LOCKET & BUMP INTERACTIVE UPGRADES
+    // ==========================================
+
+    // 1. Leaflet Marker Ripple
+    function triggerBumpRipple(lat, lng) {
+        if (!map) return;
+        const rippleIcon = L.divIcon({
+            className: 'ripple-container',
+            html: '<div class="leaflet-marker-ripple"></div>',
+            iconSize: [0, 0]
+        });
+        const rippleMarker = L.marker([lat, lng], { icon: rippleIcon }).addTo(map);
+        setTimeout(() => {
+            map.removeLayer(rippleMarker);
+        }, 1000);
+    }
+
+    // 2. Floating Emoji Burst
+    function createEmojiBurst(btnElement, type) {
+        if (!btnElement) return;
+        const rect = btnElement.getBoundingClientRect();
+        const startX = rect.left + rect.width / 2;
+        const startY = rect.top + rect.height / 2;
+
+        let emoji = '❤️';
+        if (type === 'like') emoji = '👍';
+        else if (type === 'heart') emoji = '❤️';
+        else if (type === 'haha') emoji = '😂';
+        else if (type === 'wow') emoji = '😮';
+        else if (type === 'sad') emoji = '😢';
+
+        for (let i = 0; i < 8; i++) {
+            const el = document.createElement('div');
+            el.className = 'floating-emoji';
+            el.textContent = emoji;
+            el.style.left = `${startX}px`;
+            el.style.top = `${startY}px`;
+            
+            const drift = (Math.random() - 0.5) * 120;
+            const rotate = (Math.random() - 0.5) * 60;
+            const delay = Math.random() * 0.3;
+            const size = 18 + Math.random() * 14;
+            
+            el.style.setProperty('--drift', `${drift}px`);
+            el.style.setProperty('--rotate', `${rotate}deg`);
+            el.style.animationDelay = `${delay}s`;
+            el.style.fontSize = `${size}px`;
+
+            document.body.appendChild(el);
+
+            el.addEventListener('animationend', () => {
+                el.remove();
+            });
+        }
+    }
+
+    // 3. Locket Mini Widget Camera Logic
+    let widgetStream = null;
+    let widgetCapturedBase64 = null;
+
+    async function toggleLocketWidgetCamera() {
+        const video = document.getElementById('widgetVideo');
+        const placeholder = document.getElementById('widgetPlaceholder');
+        const capturedImg = document.getElementById('widgetCapturedImg');
+        const actionPanel = document.getElementById('widgetActionPanel');
+        const controls = document.getElementById('widgetControls');
+        const captionArea = document.getElementById('widgetCaptionArea');
+
+        if (widgetStream) {
+            return; 
+        }
+
+        // Initialize location
+        if (currentLocationMarker) {
+            const pos = currentLocationMarker.getLatLng();
+            locketLat = pos.lat;
+            locketLng = pos.lng;
+        } else if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    locketLat = pos.coords.latitude;
+                    locketLng = pos.coords.longitude;
+                },
+                err => {
+                    console.warn("Could not get geo location", err);
+                }
+            );
+        }
+
+        try {
+            controls.innerHTML = `<h6 class="fw-bold mb-1" style="font-size: 13px;">Camera đang bật...</h6><p class="text-muted mb-0 small text-truncate">Chạm nút chụp tròn bên phải</p>`;
+            widgetStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: 320, height: 320 }
+            });
+            video.srcObject = widgetStream;
+            video.style.display = 'block';
+            placeholder.style.display = 'none';
+            capturedImg.style.display = 'none';
+
+            actionPanel.style.setProperty('display', 'flex', 'important');
+            document.getElementById('widgetSnapBtn').style.display = 'flex';
+            document.getElementById('widgetPostBtn').style.display = 'none';
+            document.getElementById('widgetResetBtn').style.display = 'none';
+            captionArea.style.display = 'none';
+        } catch (err) {
+            console.error("Camera access failed", err);
+            controls.innerHTML = `<h6 class="fw-bold mb-1 text-danger" style="font-size: 13px;">Lỗi Camera!</h6><p class="text-muted mb-0 small">Không thể truy cập camera của bạn.</p>`;
+        }
+    }
+
+    function snapWidgetPhoto() {
+        const video = document.getElementById('widgetVideo');
+        const canvas = document.getElementById('widgetCanvas');
+        const capturedImg = document.getElementById('widgetCapturedImg');
+        const snapBtn = document.getElementById('widgetSnapBtn');
+        const postBtn = document.getElementById('widgetPostBtn');
+        const resetBtn = document.getElementById('widgetResetBtn');
+        const captionArea = document.getElementById('widgetCaptionArea');
+        const controls = document.getElementById('widgetControls');
+
+        if (!widgetStream) return;
+
+        const size = Math.min(video.videoWidth, video.videoHeight) || 320;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const sx = (video.videoWidth - size) / 2;
+        const sy = (video.videoHeight - size) / 2;
+
+        ctx.translate(size, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        widgetCapturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        capturedImg.src = widgetCapturedBase64;
+        capturedImg.style.display = 'block';
+        video.style.display = 'none';
+
+        if (widgetStream) {
+            widgetStream.getTracks().forEach(track => track.stop());
+            widgetStream = null;
+        }
+
+        snapBtn.style.display = 'none';
+        postBtn.style.display = 'flex';
+        resetBtn.style.display = 'flex';
+        captionArea.style.display = 'block';
+
+        controls.innerHTML = `<h6 class="fw-bold mb-1" style="font-size: 13px;">Tuyệt vời!</h6><p class="text-muted mb-0 small">Bạn có thể thêm chữ và đăng ngay.</p>`;
+    }
+
+    function resetWidgetLocket() {
+        const video = document.getElementById('widgetVideo');
+        const placeholder = document.getElementById('widgetPlaceholder');
+        const capturedImg = document.getElementById('widgetCapturedImg');
+        const snapBtn = document.getElementById('widgetSnapBtn');
+        const postBtn = document.getElementById('widgetPostBtn');
+        const resetBtn = document.getElementById('widgetResetBtn');
+        const captionArea = document.getElementById('widgetCaptionArea');
+        const controls = document.getElementById('widgetControls');
+
+        widgetCapturedBase64 = null;
+        capturedImg.style.display = 'none';
+        video.style.display = 'none';
+        placeholder.style.display = 'flex';
+        snapBtn.style.display = 'flex';
+        postBtn.style.display = 'none';
+        resetBtn.style.display = 'none';
+        captionArea.style.display = 'none';
+
+        const textOverlay = document.getElementById('widgetTextOverlay');
+        if (textOverlay) textOverlay.remove();
+        document.getElementById('widgetCaptionInput').value = '';
+
+        controls.innerHTML = `<h6 class="fw-bold mb-1" style="font-size: 13px;">Chụp nhanh Locket!</h6><p class="text-muted mb-0 small text-truncate">Chạm ống kính tròn để bật camera</p>`;
+
+        if (widgetStream) {
+            widgetStream.getTracks().forEach(track => track.stop());
+            widgetStream = null;
+        }
+    }
+
+    function postWidgetLocket() {
+        if (!widgetCapturedBase64) return;
+        if (!locketLat || !locketLng) {
+            if (map) {
+                const center = map.getCenter();
+                locketLat = center.lat;
+                locketLng = center.lng;
+            } else {
+                alert("Vui lòng đợi thiết bị cập nhật vị trí GPS...");
+                return;
+            }
+        }
+
+        const captionInput = document.getElementById('widgetCaptionInput');
+        const caption = captionInput ? captionInput.value.trim() : 'Locket khoảnh khắc';
+        const tripIdVal = document.getElementById('widgetTripId').value;
+
+        const postBtn = document.getElementById('widgetPostBtn');
+        const oldHtml = postBtn.innerHTML;
+        postBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        postBtn.disabled = true;
+
+        fetch('index.php?url=location/saveLocket', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: widgetCapturedBase64,
+                caption: caption,
+                lat: locketLat,
+                lng: locketLng,
+                privacy: 'friends',
+                album_name: '',
+                trip_id: tripIdVal || null
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                var photoIcon = L.divIcon({
+                    className: 'photo-marker',
+                    html: `
+                        <div class="marker-container" style="animation: slideUp 0.5s ease-out;">
+                            <img src="${data.image_url}" class="marker-image">
+                            <div class="marker-arrow"></div>
+                        </div>
+                    `,
+                    iconSize: [50, 50],
+                    iconAnchor: [25, 50],
+                    popupAnchor: [0, -50]
+                });
+                
+                var marker = L.marker([locketLat, locketLng], { icon: photoIcon }).addTo(map);
+                marker.on('click', function(e) {
+                    triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+                });
+                marker.bindPopup(`
+                    <div class="p-2 text-center" style="width: 240px">
+                        <img src="${data.image_url}" class="img-fluid rounded-3 mb-2 shadow-sm" style="max-height: 200px; object-fit: cover;">
+                        <h6 class="fw-bold mb-1">${data.place_name}</h6>
+                        <p class="small text-secondary mb-0">${caption}</p>
+                    </div>
+                `);
+
+                triggerBumpRipple(locketLat, locketLng);
+                map.flyTo([locketLat, locketLng], 16);
+
+                resetWidgetLocket();
+                
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                alert("Lỗi khi đăng: " + data.message);
+                postBtn.innerHTML = oldHtml;
+                postBtn.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Lỗi mạng!");
+            postBtn.innerHTML = oldHtml;
+            postBtn.disabled = false;
+        });
+    }
+
+    // 4. Tinder-Style Card Stack Swipe mechanics
+    function initCardSwipe() {
+        const containers = document.querySelectorAll('.locket-stack-container');
+        containers.forEach(container => {
+            if (container.dataset.swipeInitialized) return;
+            container.dataset.swipeInitialized = 'true';
+
+            let cards = Array.from(container.querySelectorAll('.locket-stack-card'));
+            if (cards.length <= 1) return;
+
+            setupTopCardSwipe(container);
+        });
+    }
+
+    function setupTopCardSwipe(container) {
+        let cards = Array.from(container.querySelectorAll('.locket-stack-card'));
+        if (cards.length <= 1) return;
+
+        cards.sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+
+        const topCard = cards[0];
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        const origTransform = topCard.style.transform || '';
+
+        const onStart = (clientX, clientY) => {
+            isDragging = true;
+            startX = clientX;
+            startY = clientY;
+            topCard.style.transition = 'none';
+            topCard.style.cursor = 'grabbing';
+        };
+
+        const onMove = (clientX, clientY) => {
+            if (!isDragging) return;
+            currentX = clientX - startX;
+            currentY = clientY - startY;
+
+            const rotate = currentX * 0.08;
+            topCard.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
+        };
+
+        const onEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            topCard.style.cursor = 'grab';
+
+            const threshold = 100;
+            if (Math.abs(currentX) > threshold) {
+                const direction = currentX > 0 ? 1 : -1;
+                topCard.style.transition = 'transform 0.4s cubic-bezier(0.1, 0.8, 0.3, 1)';
+                topCard.style.transform = `translate(${direction * window.innerWidth}px, ${currentY}px) rotate(${direction * 45}deg)`;
+
+                setTimeout(() => {
+                    container.appendChild(topCard);
+                    updateStackLayout(container);
+                    setupTopCardSwipe(container);
+                }, 400);
+            } else {
+                topCard.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                topCard.style.transform = origTransform;
+            }
+
+            currentX = 0;
+            currentY = 0;
+        };
+
+        const clone = topCard.cloneNode(true);
+        topCard.parentNode.replaceChild(clone, topCard);
+
+        clone.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            let clickTime = Date.now();
+            onStart(e.clientX, e.clientY);
+
+            const upHandler = () => {
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
+                onEnd();
+                
+                if (Date.now() - clickTime < 250 && Math.abs(currentX) < 10 && Math.abs(currentY) < 10) {
+                    const tripId = container.dataset.tripId;
+                    const idx = clone.dataset.index;
+                    const titleEl = container.closest('.timeline-body').querySelector('.fw-bold');
+                    const title = titleEl ? titleEl.textContent.trim() : 'Album Chuyến đi';
+                    openTripGallery(tripId, parseInt(idx), title);
+                }
+            };
+
+            const moveHandler = (moveEvt) => {
+                onMove(moveEvt.clientX, moveEvt.clientY);
+            };
+
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
+        });
+
+        clone.addEventListener('touchstart', (e) => {
+            if (e.target.closest('button')) return;
+            let clickTime = Date.now();
+            const touch = e.touches[0];
+            onStart(touch.clientX, touch.clientY);
+
+            const moveHandler = (moveEvt) => {
+                const t = moveEvt.touches[0];
+                onMove(t.clientX, t.clientY);
+            };
+
+            const endHandler = () => {
+                clone.removeEventListener('touchmove', moveHandler);
+                clone.removeEventListener('touchend', endHandler);
+                onEnd();
+
+                if (Date.now() - clickTime < 250 && Math.abs(currentX) < 15 && Math.abs(currentY) < 15) {
+                    const tripId = container.dataset.tripId;
+                    const idx = clone.dataset.index;
+                    const titleEl = container.closest('.timeline-body').querySelector('.fw-bold');
+                    const title = titleEl ? titleEl.textContent.trim() : 'Album Chuyến đi';
+                    openTripGallery(tripId, parseInt(idx), title);
+                }
+            };
+
+            clone.addEventListener('touchmove', moveHandler, { passive: true });
+            clone.addEventListener('touchend', endHandler, { passive: true });
+        }, { passive: true });
+    }
+
+    function updateStackLayout(container) {
+        let cards = Array.from(container.querySelectorAll('.locket-stack-card'));
+        const count = cards.length;
+        
+        cards.forEach((card, idx) => {
+            const z_index = count - idx;
+            const offset_y = idx * 6;
+            const scale = 1 - (idx * 0.04);
+            const rot = (idx % 2 == 0 ? 1 : -1) * Math.min(3, idx * 1.5);
+
+            card.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2)';
+            card.style.zIndex = z_index;
+            card.style.transform = `translateY(${offset_y}px) scale(${scale}) rotate(${rot}deg)`;
+            
+            const hint = card.querySelector('.position-absolute');
+            if (hint) {
+                if (idx === 0) {
+                    hint.style.display = 'flex';
+                } else {
+                    hint.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Draggable caption overlays
+    document.addEventListener('DOMContentLoaded', () => {
+        // Widget Camera text input
+        const widgetCaptionInput = document.getElementById('widgetCaptionInput');
+        if (widgetCaptionInput) {
+            widgetCaptionInput.addEventListener('input', function(e) {
+                const text = e.target.value;
+                let overlay = document.getElementById('widgetTextOverlay');
+                const circle = document.querySelector('.locket-preview-circle');
+                if (!circle) return;
+
+                if (!overlay && text) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'widgetTextOverlay';
+                    overlay.style.position = 'absolute';
+                    overlay.style.left = '0';
+                    overlay.style.right = '0';
+                    overlay.style.top = '50%';
+                    overlay.style.transform = 'translateY(-50%)';
+                    overlay.style.background = 'rgba(0,0,0,0.65)';
+                    overlay.style.color = '#fff';
+                    overlay.style.fontSize = '8px';
+                    overlay.style.fontWeight = 'bold';
+                    overlay.style.textAlign = 'center';
+                    overlay.style.padding = '2px 4px';
+                    overlay.style.pointerEvents = 'auto';
+                    overlay.style.cursor = 'grab';
+                    overlay.style.userSelect = 'none';
+                    overlay.style.zIndex = '5';
+                    
+                    let isDragging = false;
+                    let startY = 0;
+                    let startTop = 50;
+                    
+                    const onStart = (clientY) => {
+                        isDragging = true;
+                        startY = clientY;
+                        const styleTop = overlay.style.top;
+                        startTop = parseFloat(styleTop) || 50;
+                        overlay.style.cursor = 'grabbing';
+                    };
+                    
+                    const onMove = (clientY) => {
+                        if (!isDragging) return;
+                        const rect = circle.getBoundingClientRect();
+                        const deltaY = clientY - startY;
+                        const deltaPercent = (deltaY / rect.height) * 100;
+                        let newTop = startTop + deltaPercent;
+                        newTop = Math.max(15, Math.min(85, newTop));
+                        overlay.style.top = `${newTop}%`;
+                    };
+                    
+                    const onEnd = () => {
+                        isDragging = false;
+                        overlay.style.cursor = 'grab';
+                    };
+                    
+                    overlay.addEventListener('mousedown', (evt) => {
+                        evt.stopPropagation();
+                        onStart(evt.clientY);
+                    });
+                    document.addEventListener('mousemove', (evt) => {
+                        onMove(evt.clientY);
+                    });
+                    document.addEventListener('mouseup', () => {
+                        onEnd();
+                    });
+                    
+                    overlay.addEventListener('touchstart', (evt) => {
+                        evt.stopPropagation();
+                        if (evt.touches.length > 0) onStart(evt.touches[0].clientY);
+                    }, { passive: true });
+                    document.addEventListener('touchmove', (evt) => {
+                        if (evt.touches.length > 0) onMove(evt.touches[0].clientY);
+                    }, { passive: true });
+                    document.addEventListener('touchend', () => {
+                        onEnd();
+                    });
+                    
+                    circle.appendChild(overlay);
+                }
+                
+                if (overlay) {
+                    overlay.textContent = text;
+                    if (!text) overlay.remove();
+                }
+            });
+        }
+
+        // Full Screen Modal Camera text input
+        const locketCaptionInput = document.getElementById('locketCaption');
+        if (locketCaptionInput) {
+            locketCaptionInput.addEventListener('input', function(e) {
+                const text = e.target.value;
+                let overlay = document.getElementById('modalTextOverlay');
+                const viewfinder = document.querySelector('.camera-viewfinder');
+                if (!viewfinder) return;
+
+                if (!overlay && text) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'modalTextOverlay';
+                    overlay.style.position = 'absolute';
+                    overlay.style.left = '0';
+                    overlay.style.right = '0';
+                    overlay.style.top = '50%';
+                    overlay.style.transform = 'translateY(-50%)';
+                    overlay.style.background = 'rgba(0,0,0,0.65)';
+                    overlay.style.color = '#fff';
+                    overlay.style.fontSize = '18px';
+                    overlay.style.fontWeight = 'bold';
+                    overlay.style.textAlign = 'center';
+                    overlay.style.padding = '8px 12px';
+                    overlay.style.pointerEvents = 'auto';
+                    overlay.style.cursor = 'grab';
+                    overlay.style.userSelect = 'none';
+                    overlay.style.zIndex = '10';
+                    
+                    let isDragging = false;
+                    let startY = 0;
+                    let startTop = 50;
+                    
+                    const onStart = (clientY) => {
+                        isDragging = true;
+                        startY = clientY;
+                        const styleTop = overlay.style.top;
+                        startTop = parseFloat(styleTop) || 50;
+                        overlay.style.cursor = 'grabbing';
+                    };
+                    
+                    const onMove = (clientY) => {
+                        if (!isDragging) return;
+                        const rect = viewfinder.getBoundingClientRect();
+                        const deltaY = clientY - startY;
+                        const deltaPercent = (deltaY / rect.height) * 100;
+                        let newTop = startTop + deltaPercent;
+                        newTop = Math.max(10, Math.min(90, newTop));
+                        overlay.style.top = `${newTop}%`;
+                    };
+                    
+                    const onEnd = () => {
+                        isDragging = false;
+                        overlay.style.cursor = 'grab';
+                    };
+                    
+                    overlay.addEventListener('mousedown', (evt) => {
+                        evt.stopPropagation();
+                        onStart(evt.clientY);
+                    });
+                    document.addEventListener('mousemove', (evt) => {
+                        onMove(evt.clientY);
+                    });
+                    document.addEventListener('mouseup', () => {
+                        onEnd();
+                    });
+                    
+                    overlay.addEventListener('touchstart', (evt) => {
+                        evt.stopPropagation();
+                        if (evt.touches.length > 0) onStart(evt.touches[0].clientY);
+                    }, { passive: true });
+                    document.addEventListener('touchmove', (evt) => {
+                        if (evt.touches.length > 0) onMove(evt.touches[0].clientY);
+                    }, { passive: true });
+                    document.addEventListener('touchend', () => {
+                        onEnd();
+                    });
+                    
+                    viewfinder.appendChild(overlay);
+                }
+                
+                if (overlay) {
+                    overlay.textContent = text;
+                    if (!text) overlay.remove();
+                }
+            });
+        }
+    });
+
+    // Initialize lightbox and swipe stacks on load
+    document.addEventListener('DOMContentLoaded', () => {
+        initLightbox();
+        initCardSwipe();
+    });
 
     // Trip Action Helpers
     function openCameraForTrip(tripId, tripTitle) {
