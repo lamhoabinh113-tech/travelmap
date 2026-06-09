@@ -202,15 +202,36 @@
             -webkit-text-fill-color: transparent;
         }
         
-        /* Map Filter Pills */
-        .filter-pill {
-            transition: all 0.2s ease;
-            border: 1px solid transparent !important;
+        /* Map Filter Dropdown Panel */
+        .map-filter-dropdown {
+            position: absolute;
+            right: 70px;
+            top: 16px;
+            width: 220px;
+            background: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+            transform: translateX(15px) scale(0.9);
+            opacity: 0;
+            pointer-events: none;
         }
-        .filter-pill.active {
-            background-color: #6366f1 !important;
-            color: #ffffff !important;
-            border-color: #6366f1 !important;
+        .map-filter-dropdown.show {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* Mobile adjustment to match map-mode-pill media query */
+        @media (max-width: 768px) {
+            .map-filter-dropdown {
+                top: 24px;
+                right: 76px;
+            }
         }
         
         /* Achievements Badges CSS */
@@ -404,25 +425,7 @@
     <div class="map-section">
         <div id="map"></div>
         
-        <!-- Map Filter Bar -->
-        <div class="map-filter-bar px-3 py-2 rounded-pill shadow d-flex align-items-center gap-2 overflow-auto" style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255,255,255,0.45); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.25); max-width: 90%; scrollbar-width: none;">
-            <span class="small fw-bold text-muted text-nowrap d-none d-md-inline"><i class="bi bi-funnel-fill text-primary"></i> Lọc bản đồ:</span>
-            <button class="btn btn-xs btn-light rounded-pill px-3 py-1 active shadow-sm filter-pill" onclick="applyMapFilter('all', '', this)" style="font-size: 10px; font-weight: bold;">Tất cả</button>
-            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Hạnh phúc', this)" style="font-size: 10px;">😊 Hạnh phúc</button>
-            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Tuyệt vời', this)" style="font-size: 10px;">🤩 Tuyệt vời</button>
-            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Bình yên', this)" style="font-size: 10px;">🧘 Bình yên</button>
-            <button class="btn btn-xs btn-light rounded-pill px-2 py-1 shadow-sm filter-pill" onclick="applyMapFilter('feeling', 'Thú vị', this)" style="font-size: 10px;">🎈 Thú vị</button>
-            
-            <?php if(!empty($trips)): ?>
-                <div class="vr mx-1"></div>
-                <select id="mapTripFilter" class="form-select form-select-sm rounded-pill" onchange="applyMapFilter('trip', this.value)" style="font-size: 9px; padding: 2px 20px 2px 10px; border: none; background-color: rgba(255,255,255,0.85); font-weight: bold; width: auto; max-width: 120px;">
-                    <option value="">-- Theo Chuyến đi --</option>
-                    <?php foreach($trips as $t): ?>
-                        <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            <?php endif; ?>
-        </div>
+        <!-- (Old Map Filter Bar Removed) -->
         
         <!-- Profile Badge -->
         <div class="profile-badge" data-bs-toggle="modal" data-bs-target="#profileModal" style="cursor: pointer;">
@@ -452,9 +455,40 @@
             <button type="button" class="active" id="darkMapBtn" onclick="setMapTheme('dark')" title="Bản đồ tối"><i class="bi bi-moon-stars-fill"></i></button>
             <button type="button" id="lightMapBtn" onclick="setMapTheme('light')" title="Bản đồ sáng"><i class="bi bi-brightness-high-fill"></i></button>
             <button type="button" id="satelliteMapBtn" onclick="setMapTheme('satellite')" title="Bản đồ vệ tinh"><i class="bi bi-globe"></i></button>
+            <button type="button" id="mapFilterToggleBtn" onclick="toggleMapFilterPanel()" title="Bộ lọc bản đồ"><i class="bi bi-funnel-fill"></i></button>
             <button type="button" class="active" id="followLocationBtn" onclick="toggleFollowLocation()" title="Theo dõi vị trí thực tế"><i class="bi bi-crosshair"></i></button>
             <button type="button" onclick="refreshMyLocation()" title="Định vị lại (GPS chính xác)"><i class="bi bi-arrow-clockwise"></i></button>
             <button type="button" onclick="window.location.href='index.php?url=auth/logout'" title="Đăng xuất" style="background: rgba(239, 68, 68, 0.8);"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+
+        <div id="mapFilterDropdown" class="map-filter-dropdown">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom" style="border-color: rgba(0,0,0,0.08) !important;">
+                <span class="small fw-bold text-premium-gradient"><i class="bi bi-funnel-fill"></i> Bộ Lọc Bản Đồ</span>
+                <button type="button" class="btn-close" style="font-size: 8px; padding: 2px;" onclick="toggleMapFilterPanel()"></button>
+            </div>
+            <div class="mb-2">
+                <label class="form-label text-muted mb-1" style="font-size: 10px; font-weight: 600;">CẢM XÚC</label>
+                <select id="mapFeelingFilter" class="form-select form-select-sm rounded-pill" onchange="applyMapFilterDirect()" style="font-size: 11px; padding: 4px 12px; background-color: rgba(255,255,255,0.85);">
+                    <option value="">-- Tất cả cảm xúc --</option>
+                    <option value="Hạnh phúc">😊 Hạnh phúc</option>
+                    <option value="Tuyệt vời">🤩 Tuyệt vời</option>
+                    <option value="Bình yên">🧘 Bình yên</option>
+                    <option value="Thú vị">🎈 Thú vị</option>
+                    <option value="Nhớ nhung">🥺 Nhớ nhung</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-muted mb-1" style="font-size: 10px; font-weight: 600;">CHUYẾN ĐI</label>
+                <select id="mapTripDropdownFilter" class="form-select form-select-sm rounded-pill" onchange="applyMapFilterDirect()" style="font-size: 11px; padding: 4px 12px; background-color: rgba(255,255,255,0.85);">
+                    <option value="">-- Tất cả chuyến đi --</option>
+                    <?php if(!empty($trips)): ?>
+                        <?php foreach($trips as $t): ?>
+                            <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['title']); ?></option>
+                        <?php endforeach; ?>
+                      <?php endif; ?>
+                </select>
+            </div>
+            <button type="button" class="btn btn-xs btn-light rounded-pill w-100 fw-bold border" onclick="resetAllMapFilters()" style="font-size: 10px; padding: 6px;">Đặt lại bộ lọc</button>
         </div>
 
         <div id="liveLocationHud" class="live-location-hud" style="display:none;">
@@ -2752,22 +2786,35 @@
     }
 
     // 6. Interactive Map Filtering & Polyline Redrawing
-    function applyMapFilter(type, value, element = null) {
-        if (type === 'all' || type === 'feeling') {
-            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
-            if (element) {
-                element.classList.add('active');
+    function toggleMapFilterPanel() {
+        const dropdown = document.getElementById('mapFilterDropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('show');
+        }
+    }
+
+    function resetAllMapFilters() {
+        const feelingFilter = document.getElementById('mapFeelingFilter');
+        const tripFilter = document.getElementById('mapTripDropdownFilter');
+        if (feelingFilter) feelingFilter.value = '';
+        if (tripFilter) tripFilter.value = '';
+        applyMapFilterDirect();
+    }
+
+    function applyMapFilterDirect() {
+        const feelingFilter = document.getElementById('mapFeelingFilter');
+        const tripFilter = document.getElementById('mapTripDropdownFilter');
+        
+        const feelingVal = feelingFilter ? feelingFilter.value : '';
+        const tripVal = tripFilter ? tripFilter.value : '';
+
+        const filterBtn = document.getElementById('mapFilterToggleBtn');
+        if (filterBtn) {
+            if (feelingVal || tripVal) {
+                filterBtn.classList.add('active');
             } else {
-                const btns = Array.from(document.querySelectorAll('.filter-pill'));
-                const matched = btns.find(b => b.innerText.includes(value) || (value === '' && b.innerText === 'Tất cả'));
-                if (matched) matched.classList.add('active');
+                filterBtn.classList.remove('active');
             }
-            const selectFilter = document.getElementById('mapTripFilter');
-            if (selectFilter) selectFilter.value = '';
-        } else if (type === 'trip') {
-            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
-            const allBtn = Array.from(document.querySelectorAll('.filter-pill')).find(b => b.innerText === 'Tất cả');
-            if (allBtn && value === '') allBtn.classList.add('active');
         }
 
         let boundsPoints = [];
@@ -2777,14 +2824,9 @@
             const marker = markers[loc.id];
             if (!marker) return;
 
-            let show = false;
-            if (type === 'all' || (type === 'trip' && value === '')) {
-                show = true;
-            } else if (type === 'feeling' && loc.feeling === value) {
-                show = true;
-            } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
-                show = true;
-            }
+            let show = true;
+            if (feelingVal && loc.feeling !== feelingVal) show = false;
+            if (tripVal && Number(loc.trip_id) !== Number(tripVal)) show = false;
 
             if (show) {
                 if (!map.hasLayer(marker)) {
@@ -2805,14 +2847,9 @@
 
         const visibleOwnPoints = savedLocations
             .filter(loc => {
-                let show = false;
-                if (type === 'all' || (type === 'trip' && value === '')) {
-                    show = true;
-                } else if (type === 'feeling' && loc.feeling === value) {
-                    show = true;
-                } else if (type === 'trip' && Number(loc.trip_id) === Number(value)) {
-                    show = true;
-                }
+                let show = true;
+                if (feelingVal && loc.feeling !== feelingVal) show = false;
+                if (tripVal && Number(loc.trip_id) !== Number(tripVal)) show = false;
                 return show;
             })
             .map(loc => [loc.latitude, loc.longitude]);
@@ -2831,6 +2868,17 @@
             map.fitBounds(boundsPoints, { padding: [50, 50], maxZoom: 16 });
         }
     }
+
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('mapFilterDropdown');
+        const toggleBtn = document.getElementById('mapFilterToggleBtn');
+        if (dropdown && toggleBtn) {
+            if (!dropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('activeTab')) {
