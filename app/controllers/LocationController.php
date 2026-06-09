@@ -58,6 +58,15 @@ class LocationController {
         $tripModel = new TripModel($this->db);
         $trips = $tripModel->getByUser($user_id);
 
+        // Lấy 4 ảnh mới nhất của mỗi chuyến đi để hiển thị preview
+        foreach ($trips as &$t) {
+            $q_photos = "SELECT image FROM locations WHERE trip_id = :trip_id AND image IS NOT NULL AND image != '' ORDER BY visit_date DESC, id DESC LIMIT 4";
+            $s_photos = $this->db->prepare($q_photos);
+            $s_photos->execute([':trip_id' => $t['id']]);
+            $t['photos'] = $s_photos->fetchAll(PDO::FETCH_COLUMN);
+        }
+        unset($t);
+
         // Lấy thông tin XP và Danh hiệu
         $q_user = "SELECT xp FROM users WHERE id = :uid";
         $s_user = $this->db->prepare($q_user);

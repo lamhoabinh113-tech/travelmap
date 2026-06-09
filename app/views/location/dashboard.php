@@ -506,6 +506,17 @@
                             <div class="p-3 bg-white rounded-4 shadow-sm border" style="cursor:pointer" onclick="filterMapByTrip(<?php echo $t['id']; ?>)">
                                 <h6 class="fw-bold text-primary mb-1"><?php echo htmlspecialchars($t['title']); ?></h6>
                                 <p class="small text-muted mb-2"><?php echo htmlspecialchars($t['description']); ?></p>
+                                
+                                <?php if (!empty($t['photos'])): ?>
+                                    <div class="d-flex gap-2 mb-3 overflow-auto py-1" onclick="event.stopPropagation()" style="scrollbar-width: none;">
+                                        <?php foreach ($t['photos'] as $p): ?>
+                                            <div class="trip-card-photo" style="width: 50px; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); flex-shrink: 0; background: #eee;">
+                                                <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($p); ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'">
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="badge bg-light text-dark"><i class="bi bi-calendar3"></i> <?php echo $t['start_date'] ? date('d/m/Y', strtotime($t['start_date'])) : 'N/A'; ?></small>
                                     <?php if ($t['user_id'] == $_SESSION['user_id']): ?>
