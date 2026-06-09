@@ -67,10 +67,13 @@ try {
         UNIQUE KEY `unique_member` (`trip_id`, `user_id`),
         FOREIGN KEY (`trip_id`) REFERENCES `trips`(`id`) ON DELETE CASCADE,
         FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
     echo "ℹ️ Đã kiểm tra bảng <b>trip_members</b>.<br>";
+    
+    // 6. Tự động tính toán lại XP của tất cả người dùng dựa trên số lượng kỷ niệm đã đăng
+    $db->exec("UPDATE users u SET u.xp = (SELECT COUNT(*) * 20 FROM locations l WHERE l.user_id = u.id)");
+    echo "✅ Đã tính toán lại và khôi phục <b>XP tích lũy</b> cho toàn bộ người dùng dựa trên số địa điểm đã check-in.<br>";
 
-    echo "<br><h4 style='color:green;'>🎉 Cập nhật cấu trúc database thành công! Hãy tải lại trang dashboard để kiểm tra.</h4>";
+    echo "<br><h4 style='color:green;'>🎉 Cập nhật cấu trúc database và khôi phục XP thành công! Hãy tải lại trang dashboard để kiểm tra.</h4>";
     
 } catch (PDOException $e) {
     echo "<h4 style='color:red;'>❌ Lỗi nâng cấp: " . $e->getMessage() . "</h4>";

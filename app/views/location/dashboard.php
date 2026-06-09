@@ -255,7 +255,7 @@
                 <?php endif; ?>
             </div>
             <div class="profile-info">
-                <span class="profile-name"><?php echo $_SESSION['full_name']; ?></span>
+                <span class="profile-name"><?php echo htmlspecialchars(!empty($_SESSION['full_name']) ? $_SESSION['full_name'] : $_SESSION['username']); ?></span>
                 <span class="profile-level"><?php echo isset($badge_name) ? $badge_name : 'Explorer Lv.1'; ?> • <?php echo isset($user_xp) ? $user_xp : 0; ?> XP</span>
             </div>
         </div>
@@ -622,7 +622,10 @@
                     </button>
                 </div>
                 
-                <h4 class="fw-bold mb-1"><?php echo $_SESSION['full_name']; ?></h4>
+                <h4 class="fw-bold mb-1"><?php echo htmlspecialchars(!empty($_SESSION['full_name']) ? $_SESSION['full_name'] : $_SESSION['username']); ?></h4>
+                <?php if (!empty($_SESSION['full_name'])): ?>
+                    <div class="text-muted small mb-2">@<?php echo htmlspecialchars($_SESSION['username']); ?></div>
+                <?php endif; ?>
                 <div class="badge bg-primary fs-6 mb-3"><?php echo isset($badge_name) ? $badge_name : 'Explorer Lv.1'; ?></div>
                 
                 <div class="bg-light rounded-4 p-3 mb-4 text-start">
