@@ -40,7 +40,7 @@ class LocationController {
                 if ($t['id'] == $trip_id) { $current_trip = $t; break; }
             }
         } else {
-            $locations = $this->locationModel->getAllByUserId($user_id);
+            $locations = $this->locationModel->getTimelineLocations($user_id);
         }
         
         // Lấy danh sách bạn bè
@@ -58,14 +58,98 @@ class LocationController {
         $tripModel = new TripModel($this->db);
         $trips = $tripModel->getByUser($user_id);
 
-        // Lấy 4 ảnh mới nhất của mỗi chuyến đi để hiển thị preview
-        foreach ($trips as &$t) {
-            $q_photos = "SELECT image FROM locations WHERE trip_id = :trip_id AND image IS NOT NULL AND image != '' ORDER BY visit_date DESC, id DESC LIMIT 4";
-            $s_photos = $this->db->prepare($q_photos);
-            $s_photos->execute([':trip_id' => $t['id']]);
-            $t['photos'] = $s_photos->fetchAll(PDO::FETCH_COLUMN);
+        $trip_members_data = [];
+        $trip_photos_data = [];
+
+        if (!empty($trips)) {
+            $trip_ids = array_column($trips, 'id');
+            $placeholders = implode(',', array_fill(0, count($trip_ids), '?'));
+            
+            // Lấy thành viên của chuyến đi (bao gồm chủ chuyến đi và các thành viên được mời)
+            $q_mem = "
+                SELECT tm.trip_id, u.id as user_id, u.username, u.full_name, u.avatar 
+                FROM trip_members tm
+                JOIN users u ON tm.user_id = u.id
+                WHERE tm.trip_id IN ($placeholders)
+                UNION
+                SELECT t.id as trip_id, u.id as user_id, u.username, u.full_name, u.avatar 
+                FROM trips t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.id IN ($placeholders)
+            ";
+            $s_mem = $this->db->prepare($q_mem);
+            $params = array_merge($trip_ids, $trip_ids);
+            $s_mem->execute($params);
+            $members_list = $s_mem->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($members_list as $m) {
+                $trip_members_data[$m['trip_id']][$m['user_id']] = $m;
+            }
+
+            // Lấy tất cả ảnh của từng chuyến đi (có lọc quyền riêng tư)
+            foreach ($trips as &$t) {
+                $q_photos = "
+                    SELECT DISTINCT image_path FROM (
+                        SELECT image as image_path, visit_date, id FROM locations 
+                        WHERE trip_id = :trip_id AND image IS NOT NULL AND image != ''
+                          AND (
+                              user_id = :uid
+                              OR privacy = 'public'
+                              OR (
+                                  privacy = 'friends' 
+                                  AND EXISTS (
+                                      SELECT 1 FROM friendships f 
+                                      WHERE ((f.user_id = :uid AND f.friend_id = locations.user_id) OR (f.user_id = locations.user_id AND f.friend_id = :uid))
+                                        AND f.status = 'accepted'
+                                  )
+                              )
+                              OR (
+                                  privacy = 'specific_friends'
+                                  AND (
+                                      JSON_CONTAINS(visible_friends, CAST(:uid_json AS JSON))
+                                      OR visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                      OR visible_friends LIKE CONCAT('%', :uid, '%')
+                                  )
+                              )
+                          )
+                        UNION
+                        SELECT li.image_path, l.visit_date, li.id FROM location_images li 
+                        JOIN locations l ON li.location_id = l.id 
+                        WHERE l.trip_id = :trip_id AND li.image_path IS NOT NULL AND li.image_path != ''
+                          AND (
+                              l.user_id = :uid
+                              OR l.privacy = 'public'
+                              OR (
+                                  l.privacy = 'friends' 
+                                  AND EXISTS (
+                                      SELECT 1 FROM friendships f 
+                                      WHERE ((f.user_id = :uid AND f.friend_id = l.user_id) OR (f.user_id = l.user_id AND f.friend_id = :uid))
+                                        AND f.status = 'accepted'
+                                  )
+                              )
+                              OR (
+                                  l.privacy = 'specific_friends'
+                                  AND (
+                                      JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
+                                      OR l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                      OR l.visible_friends LIKE CONCAT('%', :uid, '%')
+                                  )
+                              )
+                          )
+                    ) AS combined_images
+                    ORDER BY visit_date DESC, id DESC
+                ";
+                $s_photos = $this->db->prepare($q_photos);
+                $s_photos->execute([
+                    ':trip_id' => $t['id'],
+                    ':uid' => $user_id,
+                    ':uid_json' => json_encode((int)$user_id)
+                ]);
+                $t['photos'] = $s_photos->fetchAll(PDO::FETCH_COLUMN);
+                $trip_photos_data[$t['id']] = $t['photos'];
+            }
+            unset($t);
         }
-        unset($t);
 
         // Lấy thông tin XP và Danh hiệu
         $q_user = "SELECT xp FROM users WHERE id = :uid";
@@ -87,6 +171,77 @@ class LocationController {
         if (isset($_GET['id'])) {
             $album = $this->locationModel->getAlbum($_GET['id']);
             echo json_encode($album);
+            exit();
+        }
+    }
+
+    // Lấy JSON tất cả ảnh trong chuyến đi (AJAX)
+    public function getTripPhotos() {
+        if (isset($_GET['trip_id'])) {
+            $trip_id = intval($_GET['trip_id']);
+            $user_id = $_SESSION['user_id'];
+
+            $q = "
+                SELECT DISTINCT image_path, visit_date, id FROM (
+                    SELECT image as image_path, visit_date, id FROM locations 
+                    WHERE trip_id = :trip_id AND image IS NOT NULL AND image != ''
+                      AND (
+                          user_id = :uid
+                          OR privacy = 'public'
+                          OR (
+                              privacy = 'friends' 
+                              AND EXISTS (
+                                  SELECT 1 FROM friendships f 
+                                  WHERE ((f.user_id = :uid AND f.friend_id = locations.user_id) OR (f.user_id = locations.user_id AND f.friend_id = :uid))
+                                    AND f.status = 'accepted'
+                              )
+                          )
+                          OR (
+                              privacy = 'specific_friends'
+                              AND (
+                                  JSON_CONTAINS(visible_friends, CAST(:uid_json AS JSON))
+                                  OR visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                  OR visible_friends LIKE CONCAT('%', :uid, '%')
+                              )
+                          )
+                      )
+                    UNION
+                    SELECT li.image_path, l.visit_date, li.id FROM location_images li 
+                    JOIN locations l ON li.location_id = l.id 
+                    WHERE l.trip_id = :trip_id AND li.image_path IS NOT NULL AND li.image_path != ''
+                      AND (
+                          l.user_id = :uid
+                          OR l.privacy = 'public'
+                          OR (
+                              l.privacy = 'friends' 
+                              AND EXISTS (
+                                  SELECT 1 FROM friendships f 
+                                  WHERE ((f.user_id = :uid AND f.friend_id = l.user_id) OR (f.user_id = l.user_id AND f.friend_id = :uid))
+                                    AND f.status = 'accepted'
+                              )
+                          )
+                          OR (
+                              l.privacy = 'specific_friends'
+                              AND (
+                                  JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
+                                  OR l.visible_friends LIKE CONCAT('%\"', :uid, '\"%')
+                                  OR l.visible_friends LIKE CONCAT('%', :uid, '%')
+                              )
+                          )
+                      )
+                ) AS combined_images
+                ORDER BY visit_date DESC, id DESC
+            ";
+            
+            $stmt = $this->db->prepare($q);
+            $stmt->execute([
+                ':trip_id' => $trip_id,
+                ':uid' => $user_id,
+                ':uid_json' => json_encode((int)$user_id)
+            ]);
+            $photos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode($photos);
             exit();
         }
     }
@@ -649,7 +804,7 @@ class LocationController {
                 $friend_info = $s_friend->fetch(PDO::FETCH_ASSOC);
 
                 // Lấy danh sách địa điểm của bạn bè
-                $locations = $this->locationModel->getAllByUserId($friend_id);
+                $locations = $this->locationModel->getAllByUserId($friend_id, $user_id);
                 $is_friend_view = true;
                 
                 // Vẫn cần lấy danh sách bạn bè để hiển thị sidebar

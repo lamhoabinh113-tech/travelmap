@@ -52,37 +52,166 @@ class LocationModel {
         return false;
     }
 
-    // Lấy tất cả địa điểm của một user
-    public function getAllByUserId($user_id) {
-        $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
-                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
-                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
-                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid LIMIT 1) as reaction_type
-                  FROM " . $this->table_name . " l
-                  JOIN users u ON l.user_id = u.id
-                  WHERE l.user_id = :user_id 
-                  ORDER BY l.visit_date DESC";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":user_id", $user_id);
-        $stmt->bindParam(":uid", $user_id);
-        $stmt->execute();
+    // Lấy tất cả địa điểm của một user, có lọc quyền riêng tư đối với người xem khác
+    public function getAllByUserId($user_id, $viewer_id = null) {
+        if ($viewer_id === null) {
+            $viewer_id = $user_id; // Mặc định tự xem thì thấy hết
+        }
+        
+        if ($user_id == $viewer_id) {
+            $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
+                             (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                             (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
+                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                      FROM " . $this->table_name . " l
+                      JOIN users u ON l.user_id = u.id
+                      WHERE l.user_id = :user_id 
+                      ORDER BY l.visit_date DESC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                ':user_id' => $user_id,
+                ':uid1' => $viewer_id,
+                ':uid2' => $viewer_id
+            ]);
+        } else {
+            // Xem của người khác -> lọc quyền riêng tư
+            $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
+                             (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                             (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
+                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                      FROM " . $this->table_name . " l
+                      JOIN users u ON l.user_id = u.id
+                      WHERE l.user_id = :user_id
+                        AND (
+                            l.privacy = 'public'
+                            OR (
+                                l.privacy = 'friends' 
+                                AND EXISTS (
+                                    SELECT 1 FROM friendships f 
+                                    WHERE ((f.user_id = :uid3 AND f.friend_id = l.user_id) OR (f.user_id = l.user_id AND f.friend_id = :uid4))
+                                      AND f.status = 'accepted'
+                                )
+                            )
+                            OR (
+                                l.privacy = 'specific_friends'
+                                AND (
+                                    JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
+                                    OR l.visible_friends LIKE CONCAT('%\"', :uid5, '\"%')
+                                    OR l.visible_friends LIKE CONCAT('%', :uid6, '%')
+                                )
+                            )
+                        )
+                      ORDER BY l.visit_date DESC";
+            $stmt = $this->conn->prepare($query);
+            $stmt->execute([
+                ':user_id' => $user_id,
+                ':uid1' => $viewer_id,
+                ':uid2' => $viewer_id,
+                ':uid3' => $viewer_id,
+                ':uid4' => $viewer_id,
+                ':uid5' => $viewer_id,
+                ':uid6' => $viewer_id,
+                ':uid_json' => json_encode((int)$viewer_id)
+            ]);
+        }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Lấy tất cả địa điểm thuộc một chuyến đi (Bao gồm của tất cả thành viên)
+    // Lấy tất cả địa điểm thuộc một chuyến đi (Bao gồm của tất cả thành viên, có lọc quyền riêng tư)
     public function getAllByTripId($trip_id, $current_user_id) {
         $query = "SELECT l.*, u.full_name, u.username, u.avatar as user_avatar,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
-                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
-                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid LIMIT 1) as reaction_type
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
+                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
                   FROM " . $this->table_name . " l
                   JOIN users u ON l.user_id = u.id
-                  WHERE l.trip_id = :trip_id 
+                  WHERE l.trip_id = :trip_id
+                    AND (
+                        l.user_id = :uid3
+                        OR l.privacy = 'public'
+                        OR (
+                            l.privacy = 'friends' 
+                            AND EXISTS (
+                                SELECT 1 FROM friendships f 
+                                WHERE ((f.user_id = :uid4 AND f.friend_id = l.user_id) OR (f.user_id = l.user_id AND f.friend_id = :uid5))
+                                  AND f.status = 'accepted'
+                            )
+                        )
+                        OR (
+                            l.privacy = 'specific_friends'
+                            AND (
+                                JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
+                                OR l.visible_friends LIKE CONCAT('%\"', :uid6, '\"%')
+                                OR l.visible_friends LIKE CONCAT('%', :uid7, '%')
+                            )
+                        )
+                    )
                   ORDER BY l.visit_date DESC, l.created_at DESC";
         $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(":trip_id", $trip_id);
-        $stmt->bindParam(":uid", $current_user_id);
-        $stmt->execute();
+        $stmt->execute([
+            ':trip_id' => $trip_id,
+            ':uid1' => $current_user_id,
+            ':uid2' => $current_user_id,
+            ':uid3' => $current_user_id,
+            ':uid4' => $current_user_id,
+            ':uid5' => $current_user_id,
+            ':uid6' => $current_user_id,
+            ':uid7' => $current_user_id,
+            ':uid_json' => json_encode((int)$current_user_id)
+        ]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy toàn bộ địa điểm hiển thị trên Dòng thời gian của user
+    // (Bao gồm địa điểm của user và địa điểm của thành viên trong chuyến đi chung, có lọc quyền riêng tư)
+    public function getTimelineLocations($user_id) {
+        $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
+                         (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
+                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                  FROM " . $this->table_name . " l
+                  JOIN users u ON l.user_id = u.id
+                  WHERE l.user_id = :uid3 
+                     OR (
+                         l.trip_id IN (
+                             SELECT id FROM trips WHERE user_id = :uid4
+                             UNION
+                             SELECT trip_id FROM trip_members WHERE user_id = :uid5
+                         )
+                         AND (
+                             l.privacy = 'public'
+                             OR (
+                                 l.privacy = 'friends' 
+                                 AND EXISTS (
+                                     SELECT 1 FROM friendships f 
+                                     WHERE ((f.user_id = :uid6 AND f.friend_id = l.user_id) OR (f.user_id = l.user_id AND f.friend_id = :uid7))
+                                       AND f.status = 'accepted'
+                                 )
+                             )
+                             OR (
+                                 l.privacy = 'specific_friends'
+                                 AND (
+                                     JSON_CONTAINS(l.visible_friends, CAST(:uid_json AS JSON))
+                                     OR l.visible_friends LIKE CONCAT('%\"', :uid8, '\"%')
+                                     OR l.visible_friends LIKE CONCAT('%', :uid9, '%')
+                                 )
+                             )
+                         )
+                     )
+                  ORDER BY l.visit_date DESC, l.id DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute([
+            ':uid1' => $user_id,
+            ':uid2' => $user_id,
+            ':uid3' => $user_id,
+            ':uid4' => $user_id,
+            ':uid5' => $user_id,
+            ':uid6' => $user_id,
+            ':uid7' => $user_id,
+            ':uid8' => $user_id,
+            ':uid9' => $user_id,
+            ':uid_json' => json_encode((int)$user_id)
+        ]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

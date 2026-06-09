@@ -100,6 +100,63 @@
             0% { transform: scale(0.9); opacity: 0.6; }
             100% { transform: scale(1.4); opacity: 0; }
         }
+        /* Collage Grid CSS */
+        .collage-grid.collage-1 {
+            grid-template-columns: 1fr;
+        }
+        .collage-grid.collage-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+        .collage-grid.collage-3 {
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+        .collage-grid.collage-4 {
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+        }
+        .collage-item {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            background: #000;
+        }
+        .collage-item img, .collage-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        .collage-item:hover img, .collage-item:hover video {
+            transform: scale(1.05);
+        }
+        .collage-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            font-size: 1.25rem;
+            pointer-events: none;
+        }
+        .hover-bg-light:hover {
+            background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .avatar-group {
+            display: flex;
+            align-items: center;
+        }
+        .avatar-item {
+            transition: transform 0.2s ease, z-index 0.2s ease;
+        }
+        .avatar-item:hover {
+            transform: translateY(-4px) scale(1.1);
+            z-index: 10;
+        }
+        .text-premium-gradient {
+            background: linear-gradient(45deg, #6366f1, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
     
     <!-- PWA Support -->
@@ -363,47 +420,293 @@
             </div>
 
             <div class="journey-timeline">
-                <?php if(empty($locations)): ?>
+                <?php
+                // Group check-ins and prepare timeline items
+                $timeline_items = [];
+                $trips_by_id = [];
+                if (!empty($trips)) {
+                    foreach ($trips as $t) {
+                        $trips_by_id[$t['id']] = $t;
+                    }
+                }
+
+                // Group $locations by trip_id
+                foreach (($locations ?? []) as $loc) {
+                    if (!empty($loc['trip_id'])) {
+                        $t_id = $loc['trip_id'];
+                        if (!isset($timeline_items['trip_' . $t_id])) {
+                            $trip_details = $trips_by_id[$t_id] ?? null;
+                            if (!$trip_details) {
+                                // Fetch trip details from database directly
+                                $q_trip = "SELECT * FROM trips WHERE id = :tid";
+                                $s_trip = $this->db->prepare($q_trip);
+                                $s_trip->execute([':tid' => $t_id]);
+                                $trip_details = $s_trip->fetch(PDO::FETCH_ASSOC);
+                                if ($trip_details) {
+                                    $trips_by_id[$t_id] = $trip_details;
+                                }
+                            }
+
+                            if ($trip_details) {
+                                $timeline_items['trip_' . $t_id] = [
+                                    'type' => 'trip',
+                                    'trip_id' => $t_id,
+                                    'title' => $trip_details['title'],
+                                    'description' => $trip_details['description'],
+                                    'start_date' => $trip_details['start_date'],
+                                    'end_date' => $trip_details['end_date'],
+                                    'owner_id' => $trip_details['user_id'],
+                                    'checkins' => [],
+                                    'visit_date' => $loc['visit_date'],
+                                ];
+                            }
+                        }
+                        if (isset($timeline_items['trip_' . $t_id])) {
+                            $timeline_items['trip_' . $t_id]['checkins'][] = $loc;
+                            if (strtotime($loc['visit_date']) > strtotime($timeline_items['trip_' . $t_id]['visit_date'])) {
+                                $timeline_items['trip_' . $t_id]['visit_date'] = $loc['visit_date'];
+                            }
+                        }
+                    } else {
+                        $timeline_items['loc_' . $loc['id']] = [
+                            'type' => 'standalone',
+                            'visit_date' => $loc['visit_date'],
+                            'loc' => $loc
+                        ];
+                    }
+                }
+
+                // Add empty trips (created by user or where user is member) so they appear on timeline immediately
+                foreach (($trips ?? []) as $t) {
+                    if (!isset($timeline_items['trip_' . $t['id']])) {
+                        $timeline_items['trip_' . $t['id']] = [
+                            'type' => 'trip',
+                            'trip_id' => $t['id'],
+                            'title' => $t['title'],
+                            'description' => $t['description'],
+                            'start_date' => $t['start_date'],
+                            'end_date' => $t['end_date'],
+                            'owner_id' => $t['user_id'],
+                            'checkins' => [],
+                            'visit_date' => $t['start_date'] ?: $t['created_at'],
+                        ];
+                    }
+                }
+
+                // Sort timeline items by visit_date DESC
+                uasort($timeline_items, function($a, $b) {
+                    return strtotime($b['visit_date']) - strtotime($a['visit_date']);
+                });
+                ?>
+
+                <?php if(empty($timeline_items)): ?>
                     <div class="text-center py-5 opacity-50">
                         <i class="bi bi-geo-alt display-4"></i>
                         <p class="mt-2">Chưa có kỷ niệm nào.</p>
                     </div>
                 <?php endif; ?>
 
-                <?php foreach($locations as $index => $loc): ?>
-                    <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
-                        <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, <?php echo htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8'); ?>)">
-                            <?= renderMedia($loc['image'], 160) ?>
-                            <?php if($loc['image']): ?>
-                                <?php $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION)); ?>
-                                <div class="album-badge">
-                                    <?php if(in_array($ext, ['mp4','webm','ogg','mov'])): ?>
-                                        <i class="bi bi-film me-1"></i> Video
-                                    <?php else: ?>
-                                        <i class="bi bi-images me-1"></i> Album
+                <?php foreach($timeline_items as $item): ?>
+                    <?php if ($item['type'] === 'standalone'): ?>
+                        <?php $loc = $item['loc']; ?>
+                        <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
+                            <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, <?php echo htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8'); ?>)">
+                                <?= renderMedia($loc['image'], 160) ?>
+                                <?php if($loc['image']): ?>
+                                    <?php $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION)); ?>
+                                    <div class="album-badge">
+                                        <?php if(in_array($ext, ['mp4','webm','ogg','mov'])): ?>
+                                            <i class="bi bi-film me-1"></i> Video
+                                        <?php else: ?>
+                                            <i class="bi bi-images me-1"></i> Album
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <span class="badge bg-secondary-subtle text-secondary mb-1" style="font-size: 10px;"><i class="bi bi-geo-alt-fill"></i> Check-in đơn lẻ</span>
+                                    <h6 class="fw-bold mb-1"><?php echo htmlspecialchars($loc['place_name']); ?></h6>
+                                </div>
+                                <?php if(!isset($is_friend_view)): ?>
+                                <div class="d-flex gap-2">
+                                    <a href="javascript:void(0)" class="text-primary opacity-50" onclick="event.stopPropagation(); openEditModal(<?php echo htmlspecialchars(json_encode($loc), ENT_QUOTES, 'UTF-8'); ?>)"><i class="bi bi-pencil-square"></i></a>
+                                    <a href="index.php?url=location/delete&id=<?php echo $loc['id']; ?>" class="text-danger opacity-50" onclick="event.stopPropagation(); return confirm('Xóa kỷ niệm này?')"><i class="bi bi-trash"></i></a>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="memory-meta-grid">
+                                <span class="memory-chip"><i class="bi bi-calendar3 text-primary"></i> <?php echo date('d/m/Y', strtotime($loc['visit_date'])); ?></span>
+                                <span class="memory-chip"><i class="bi bi-emoji-smile text-warning"></i> <?php echo htmlspecialchars($loc['feeling']); ?></span>
+                            </div>
+                            <p class="small text-muted mb-2 text-truncate"><?php echo htmlspecialchars($loc['description']); ?></p>
+                            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                                <?php echo renderReactionBtn($loc['id'], $loc['is_liked'], $loc['like_count'], $loc['reaction_type'] ?? null); ?>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <!-- TRIP ALBUM CARD -->
+                        <div class="trip-album-card p-3 bg-white rounded-4 shadow-sm border mb-4" data-trip-id="<?php echo $item['trip_id']; ?>">
+                            <!-- Trip Header -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="overflow-hidden">
+                                    <span class="badge bg-primary-subtle text-primary mb-1" style="font-size: 10px;"><i class="bi bi-briefcase-fill me-1"></i> Album chuyến đi</span>
+                                    <h5 class="fw-bold mb-1 text-premium-gradient text-truncate"><?php echo htmlspecialchars($item['title']); ?></h5>
+                                    <p class="small text-muted mb-0" style="font-size: 11px;"><i class="bi bi-calendar3 text-primary"></i> <?php 
+                                        $start = $item['start_date'] ? date('d/m/Y', strtotime($item['start_date'])) : null;
+                                        $end = $item['end_date'] ? date('d/m/Y', strtotime($item['end_date'])) : null;
+                                        if ($start && $end) {
+                                            echo $start . ' - ' . $end;
+                                        } elseif ($start) {
+                                            echo 'Từ ' . $start;
+                                        } else {
+                                            echo 'Chưa đặt ngày';
+                                        }
+                                    ?></p>
+                                </div>
+                                
+                                <!-- Overlapping avatars of members -->
+                                <div class="d-flex align-items-center flex-shrink-0">
+                                    <div class="avatar-group me-1">
+                                        <?php 
+                                        $mems = $trip_members_data[$item['trip_id']] ?? [];
+                                        $limit = 4;
+                                        $count = 0;
+                                        foreach ($mems as $m_uid => $m): 
+                                            if ($count >= $limit) break;
+                                            $count++;
+                                            $avatar_url = $m['avatar'] ? UPLOADS_URL . '/avatars/' . $m['avatar'] : 'https://cdn-icons-png.flaticon.com/512/4140/4140044.png';
+                                        ?>
+                                            <div class="avatar-item" title="<?php echo htmlspecialchars($m['full_name']); ?> (@<?php echo htmlspecialchars($m['username']); ?>)" style="width: 26px; height: 26px; border-radius: 50%; overflow: hidden; border: 2px solid white; margin-left: -8px; background: #eee; position: relative;" data-bs-toggle="tooltip">
+                                                <img src="<?php echo $avatar_url; ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'">
+                                            </div>
+                                        <?php endforeach; ?>
+                                        <?php if (count($mems) > $limit): ?>
+                                            <div class="avatar-item-more d-flex align-items-center justify-content-center text-white bg-secondary small fw-bold" style="width: 26px; height: 26px; border-radius: 50%; border: 2px solid white; margin-left: -8px; font-size: 9px; line-height: 22px;">
+                                                +<?php echo (count($mems) - $limit); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Trip settings / actions -->
+                                    <?php if ($item['owner_id'] == $_SESSION['user_id'] && !isset($is_friend_view)): ?>
+                                        <button class="btn btn-link text-muted p-1" onclick="event.stopPropagation(); openInviteModal(<?php echo $item['trip_id']; ?>)" title="Mời bạn bè">
+                                            <i class="bi bi-person-plus-fill" style="font-size: 14px;"></i>
+                                        </button>
                                     <?php endif; ?>
                                 </div>
+                            </div>
+                            
+                            <!-- Trip Description -->
+                            <?php if (!empty($item['description'])): ?>
+                                <p class="small text-secondary mb-3 text-truncate"><?php echo htmlspecialchars($item['description']); ?></p>
                             <?php endif; ?>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <h6 class="fw-bold mb-1"><?php echo htmlspecialchars($loc['place_name']); ?></h6>
-                            <?php if(!isset($is_friend_view)): ?>
-                            <div class="d-flex gap-2">
-                                <a href="javascript:void(0)" class="text-primary opacity-50" onclick="event.stopPropagation(); openEditModal(<?php echo htmlspecialchars(json_encode($loc), ENT_QUOTES, 'UTF-8'); ?>)"><i class="bi bi-pencil-square"></i></a>
-                                <a href="index.php?url=location/delete&id=<?php echo $loc['id']; ?>" class="text-danger opacity-50" onclick="event.stopPropagation(); return confirm('Xóa kỷ niệm này?')"><i class="bi bi-trash"></i></a>
+
+                            <!-- Photos Collage Grid -->
+                            <?php 
+                            $photos = $trip_photos_data[$item['trip_id']] ?? [];
+                            $photo_count = count($photos);
+                            if ($photo_count > 0): 
+                            ?>
+                                <div class="collage-grid collage-<?php echo min(4, $photo_count); ?> mb-3 rounded-4 overflow-hidden shadow-sm" style="height: 200px; display: grid; gap: 4px;">
+                                    <?php if ($photo_count == 1): ?>
+                                        <div class="collage-item w-100 h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                    <?php elseif ($photo_count == 2): ?>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                    <?php elseif ($photo_count == 3): ?>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')" style="grid-column: span 2; grid-row: span 2;">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 2, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[2]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                    <?php else: // 4 or more ?>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 0, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')" style="grid-column: span 2; grid-row: span 2;">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[0]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 1, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[1]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 2, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[2]); ?>" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="collage-item h-100 position-relative" onclick="openTripGallery(<?php echo $item['trip_id']; ?>, 3, '<?php echo htmlspecialchars($item['title'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photos[3]); ?>" class="w-100 h-100 object-fit-cover">
+                                            <?php if ($photo_count > 4): ?>
+                                                <div class="collage-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-black bg-opacity-50 text-white fw-bold">
+                                                    +<?php echo ($photo_count - 4); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="border border-dashed rounded-4 p-4 text-center text-muted mb-3 bg-light bg-opacity-50">
+                                    <i class="bi bi-images display-6 mb-2 text-primary opacity-50"></i>
+                                    <p class="small mb-0">Chưa có hình ảnh nào trong chuyến đi này.</p>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Check-ins inside the trip -->
+                            <?php if (!empty($item['checkins'])): ?>
+                                <div class="trip-checkins-list mt-3 border-top pt-3">
+                                    <h6 class="small fw-bold text-muted mb-2">CÁC ĐIỂM DỪNG CHÂN (<?php echo count($item['checkins']); ?>)</h6>
+                                    <div class="d-flex flex-column gap-2" style="max-height: 200px; overflow-y: auto; scrollbar-width: none;">
+                                        <?php foreach ($item['checkins'] as $c): ?>
+                                            <div class="p-2 border rounded-3 bg-light bg-opacity-50 d-flex align-items-center justify-content-between cursor-pointer hover-bg-light" onclick="focusMap(<?php echo $c['latitude']; ?>, <?php echo $c['longitude']; ?>, true)">
+                                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                    <div class="avatar-placeholder" style="width: 22px; height: 22px; border-radius: 50%; font-size: 9px; display:flex; align-items:center; justify-content:center; background:#e0f2fe; color:#0d6efd; flex-shrink:0;">
+                                                        <?php if ($c['user_avatar']): ?>
+                                                            <img src="<?php echo UPLOADS_URL . '/avatars/' . $c['user_avatar']; ?>" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.parentElement.innerHTML = '<?php echo strtoupper(substr($c['username'], 0, 1)); ?>'">
+                                                        <?php else: ?>
+                                                            <?php echo strtoupper(substr($c['username'], 0, 1)); ?>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="overflow-hidden">
+                                                        <div class="fw-bold small text-truncate text-dark" style="font-size: 12px;"><?php echo htmlspecialchars($c['place_name']); ?></div>
+                                                        <div class="text-muted text-truncate" style="font-size: 10px;">
+                                                            <?php echo htmlspecialchars($c['full_name'] ?: $c['username']); ?> - <?php echo htmlspecialchars($c['feeling']); ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                                                    <?php if ($c['user_id'] == $_SESSION['user_id'] && !isset($is_friend_view)): ?>
+                                                        <a href="javascript:void(0)" class="text-primary opacity-75 me-1" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($c), ENT_QUOTES, 'UTF-8'); ?>)" title="Sửa kỷ niệm">
+                                                            <i class="bi bi-pencil-square" style="font-size:13px;"></i>
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <?php echo renderReactionBtn($c['id'], $c['is_liked'], $c['like_count'], $c['reaction_type'] ?? null); ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Trip Actions -->
+                            <?php if (!isset($is_friend_view)): ?>
+                            <div class="d-flex gap-2 mt-3 pt-2 border-top">
+                                <button class="btn btn-sm btn-outline-primary rounded-pill flex-fill" style="font-size:11px;" onclick="event.stopPropagation(); openCameraForTrip(<?php echo $item['trip_id']; ?>, <?php echo htmlspecialchars(json_encode($item['title']), ENT_QUOTES, 'UTF-8'); ?>)">
+                                    <i class="bi bi-camera-fill me-1"></i> Chụp Locket
+                                </button>
+                                <button class="btn btn-sm btn-outline-success rounded-pill flex-fill" style="font-size:11px;" onclick="event.stopPropagation(); addMemoryForTrip(<?php echo $item['trip_id']; ?>)">
+                                    <i class="bi bi-plus-lg me-1"></i> Thêm Check-in
+                                </button>
                             </div>
                             <?php endif; ?>
                         </div>
-                        <div class="memory-meta-grid">
-                            <span class="memory-chip"><i class="bi bi-calendar3 text-primary"></i> <?php echo date('d/m/Y', strtotime($loc['visit_date'])); ?></span>
-                            <span class="memory-chip"><i class="bi bi-emoji-smile text-warning"></i> <?php echo htmlspecialchars($loc['feeling']); ?></span>
-                        </div>
-                        <p class="small text-muted mb-2 text-truncate"><?php echo htmlspecialchars($loc['description']); ?></p>
-                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
-                            <?php echo renderReactionBtn($loc['id'], $loc['is_liked'], $loc['like_count'], $loc['reaction_type'] ?? null); ?>
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -1677,6 +1980,67 @@
             });
     }
 
+    function openTripGallery(tripId, startPhotoIndex, title = "Album Chuyến đi") {
+        document.getElementById('albumTitle').innerText = title;
+        const itemsContainer = document.getElementById('albumItems');
+        const thumbsContainer = document.getElementById('albumThumbs');
+        itemsContainer.innerHTML = '<div class="text-white py-5"><div class="spinner-border text-primary"></div></div>';
+        thumbsContainer.innerHTML = '';
+        
+        // Ẩn nút quản lý đối với album chuyến đi
+        const manageLink = document.getElementById('manageAlbumLink');
+        if (manageLink) manageLink.style.display = 'none';
+
+        var albumModal = new bootstrap.Modal(document.getElementById('albumModal'));
+        albumModal.show();
+        
+        const videoExtensions = ['mp4', 'webm', 'ogg', 'mov'];
+
+        fetch(`index.php?url=location/getTripPhotos&trip_id=${tripId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    itemsContainer.innerHTML = data.map((item, index) => {
+                        const ext = item.image_path.split('.').pop().toLowerCase();
+                        const isVideo = videoExtensions.includes(ext);
+                        
+                        if (isVideo) {
+                            return `
+                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}">
+                                    <video controls class="d-block w-100 rounded-4" style="max-height: 70vh; background: #000;">
+                                        <source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}">
+                                        Trình duyệt của bạn không hỗ trợ xem video.
+                                    </video>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="carousel-item ${index === startPhotoIndex ? 'active' : ''}">
+                                    <img src="${uploadsUrl}/${item.image_path}" class="d-block w-100 rounded-4" style="max-height: 70vh; object-fit: contain;">
+                                </div>
+                            `;
+                        }
+                    }).join('');
+                    thumbsContainer.innerHTML = data.map((item, index) => {
+                        const ext = item.image_path.split('.').pop().toLowerCase();
+                        const isVideo = videoExtensions.includes(ext);
+                        const media = isVideo
+                            ? `<video muted><source src="${uploadsUrl}/${item.image_path}" type="video/${ext === 'mov' ? 'mp4' : ext}"></video>`
+                            : `<img src="${uploadsUrl}/${item.image_path}" alt="Album item ${index + 1}">`;
+
+                        return `<button class="album-thumb ${index === startPhotoIndex ? 'active' : ''}" type="button" data-bs-target="#albumCarousel" data-bs-slide-to="${index}" onclick="setActiveAlbumThumb(${index})">${media}</button>`;
+                    }).join('');
+                    
+                    // Kích hoạt đúng item trong carousel
+                    const carousel = new bootstrap.Carousel(document.getElementById('albumCarousel'));
+                    carousel.to(startPhotoIndex);
+                } else {
+                    itemsContainer.innerHTML = '<div class="text-white py-5">Chưa có ảnh hoặc video trong chuyến đi này.</div>';
+                    thumbsContainer.innerHTML = '';
+                }
+            });
+    }
+
     let albumSlideshow = null;
     function setActiveAlbumThumb(index) {
         document.querySelectorAll('.album-thumb').forEach((thumb, thumbIndex) => {
@@ -1746,6 +2110,14 @@
         }
     }
 
+    function toggleSpecificFriends(mode) {
+        const privacy = document.getElementById(mode + '_privacy').value;
+        const container = document.getElementById(mode + 'SpecificFriendsContainer');
+        if (container) {
+            container.style.display = (privacy === 'specific_friends') ? 'block' : 'none';
+        }
+    }
+
     function openEditModal(loc) {
         document.getElementById('edit_id').value = loc.id;
         document.getElementById('edit_place_name').value = loc.place_name;
@@ -1755,6 +2127,33 @@
         document.getElementById('edit_privacy').value = loc.privacy || 'public';
         document.getElementById('edit_trip_id').value = loc.trip_id || '';
         
+        // Reset checkboxes
+        const checkboxes = document.querySelectorAll('input[name="visible_friends[]"]');
+        checkboxes.forEach(cb => cb.checked = false);
+
+        // Pre-check allowed friends
+        if (loc.visible_friends) {
+            try {
+                let allowedIds = [];
+                if (typeof loc.visible_friends === 'string') {
+                    allowedIds = JSON.parse(loc.visible_friends);
+                } else if (Array.isArray(loc.visible_friends)) {
+                    allowedIds = loc.visible_friends;
+                }
+                if (Array.isArray(allowedIds)) {
+                    allowedIds.forEach(id => {
+                        const cb = document.getElementById('edit_friend_' + id);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            } catch (e) {
+                console.error("Error parsing visible_friends", e);
+            }
+        }
+        
+        // Toggle specific friends container
+        toggleSpecificFriends('edit');
+
         const currentImageDiv = document.getElementById('edit_current_image');
         if (loc.image) {
             currentImageDiv.innerHTML = `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3" style="max-height: 100px;">`;
