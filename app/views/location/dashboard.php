@@ -2218,7 +2218,7 @@
             submitBtn.disabled = false;
             submitBtn.innerHTML = oldText;
         });
-    }
+    });
 
     function filterMapByTrip(tripId) {
         window.location.href = 'index.php?url=location/dashboard&trip_id=' + tripId;
