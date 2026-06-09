@@ -2099,7 +2099,107 @@
         }
     }
 
-    startLiveLocationTracking();
+    // === PREMIUM GEOLOCATION PERMISSION FLOW ===
+    function showLocationPromptModal() {
+        hideLocationModals();
+        const modalHtml = `
+            <div id="locationPermissionModal" class="premium-location-modal">
+                <div class="premium-location-modal-card animate-scale-in">
+                    <div class="location-icon-container mb-3">
+                        <i class="bi bi-geo-alt-fill text-danger animate-pulse"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2 text-dark">Bật vị trí GPS của bạn</h5>
+                    <p class="text-muted small mb-4 px-2" style="line-height: 1.5;">
+                        Travel Map cần truy cập vị trí của bạn để hiển thị chính xác vị trí trên bản đồ và giúp bạn chụp ảnh đăng bài nhanh.
+                    </p>
+                    <button type="button" class="btn btn-premium rounded-pill w-100 py-2.5 fw-bold mb-2 shadow" onclick="triggerLocationGrant()">
+                        <i class="bi bi-check-circle-fill me-2"></i>Cho phép truy cập
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    function showLocationNoticeModal(message, type = 'warning') {
+        hideLocationModals();
+        const icon = type === 'danger' ? 'bi-shield-slash-fill text-danger' : 'bi-exclamation-triangle-fill text-warning';
+        const title = type === 'danger' ? 'Yêu cầu kết nối bảo mật' : 'GPS đã bị chặn';
+        const modalHtml = `
+            <div id="locationPermissionModal" class="premium-location-modal">
+                <div class="premium-location-modal-card animate-scale-in">
+                    <div class="location-icon-container mb-3">
+                        <i class="bi ${icon} animate-bounce"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2 text-dark">${title}</h5>
+                    <div class="text-muted small mb-4 px-2" style="line-height: 1.5;">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn btn-secondary rounded-pill w-100 py-2.5 fw-bold" onclick="hideLocationModals()">
+                        Đóng thông báo
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    function hideLocationModals() {
+        const el = document.getElementById('locationPermissionModal');
+        if (el) el.remove();
+    }
+
+    function triggerLocationGrant() {
+        hideLocationModals();
+        startLiveLocationTracking();
+    }
+
+    window.triggerLocationGrant = triggerLocationGrant;
+    window.hideLocationModals = hideLocationModals;
+
+    function checkAndRequestLocationPermission() {
+        if (!navigator.geolocation) {
+            showLocationNoticeModal("Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS.", "danger");
+            return;
+        }
+
+        // Kiểm tra xem có đang ở môi trường bảo mật không (HTTPS hoặc localhost)
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            const httpsUrl = 'https://' + window.location.host + window.location.pathname + window.location.search;
+            showLocationNoticeModal(`Để truy cập vị trí, hệ thống yêu cầu kết nối bảo mật HTTPS.<br><br><a href="${httpsUrl}" class="btn btn-warning rounded-pill px-4 fw-bold text-dark w-100 mt-2">Chuyển sang HTTPS</a>`, "danger");
+            return;
+        }
+
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                if (result.state === 'prompt') {
+                    showLocationPromptModal();
+                } else if (result.state === 'denied') {
+                    showLocationNoticeModal("Truy cập vị trí bị chặn! Vui lòng chạm vào biểu tượng ổ khóa 🔒 trên thanh địa chỉ trình duyệt, sau đó chọn Cho phép (Allow) quyền Vị trí.", "warning");
+                } else {
+                    startLiveLocationTracking();
+                }
+
+                result.onchange = function() {
+                    if (result.state === 'granted') {
+                        hideLocationModals();
+                        startLiveLocationTracking();
+                    } else if (result.state === 'denied') {
+                        showLocationNoticeModal("Truy cập vị trí bị chặn! Vui lòng chạm vào biểu tượng ổ khóa 🔒 trên thanh địa chỉ trình duyệt, sau đó chọn Cho phép (Allow) quyền Vị trí.", "warning");
+                    }
+                };
+            }).catch(function(err) {
+                startLiveLocationTracking();
+            });
+        } else {
+            // Fallback cho trình duyệt không hỗ trợ Permissions query
+            startLiveLocationTracking();
+        }
+    }
+
+    // Thực hiện hỏi quyền vị trí của người dùng ngay khi tải trang
+    checkAndRequestLocationPermission();
+
     window.addEventListener('beforeunload', stopLiveLocationTracking);
 
     // Invalidate map size on load and resize to prevent gray tiles
