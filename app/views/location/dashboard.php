@@ -125,6 +125,7 @@
         .locket-stack-container {
             perspective: 800px;
             position: relative;
+            padding-bottom: 10px;
         }
         .locket-stack-card {
             background: #ffffff !important;
@@ -132,8 +133,21 @@
             border-bottom: 26px solid #ffffff !important;
             border-radius: 12px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
-            transform-origin: center center;
+            transform-origin: bottom center !important;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) !important;
+        }
+        /* Fan-like spread hover effect */
+        .locket-stack-container:hover .locket-stack-card[data-index="0"] {
+            transform: translateY(0px) rotate(0deg) scale(1) !important;
+        }
+        .locket-stack-container:hover .locket-stack-card[data-index="1"] {
+            transform: translateX(45px) translateY(-5px) rotate(10deg) scale(0.96) !important;
+        }
+        .locket-stack-container:hover .locket-stack-card[data-index="2"] {
+            transform: translateX(-45px) translateY(-5px) rotate(-10deg) scale(0.96) !important;
+        }
+        .locket-stack-container:hover .locket-stack-card[data-index="3"] {
+            transform: translateX(90px) translateY(2px) rotate(20deg) scale(0.92) !important;
         }
         
         /* Floating Emoji CSS */
@@ -700,6 +714,19 @@
                     }
                 }
 
+                if (!function_exists('getFeelingEmojiPhp')) {
+                    function getFeelingEmojiPhp($feeling) {
+                        $map = [
+                            'Hạnh phúc' => '😊',
+                            'Tuyệt vời' => '🤩',
+                            'Bình yên' => '🧘',
+                            'Thú vị' => '🎈',
+                            'Nhớ nhung' => '🥺'
+                        ];
+                        return $map[$feeling] ?? '📍';
+                    }
+                }
+
                 // Sort timeline items by visit_date DESC
                 uasort($timeline_items, function($a, $b) {
                     return strtotime($b['visit_date']) - strtotime($a['visit_date']);
@@ -745,7 +772,7 @@
                             </div>
                             <div class="memory-meta-grid">
                                 <span class="memory-chip"><i class="bi bi-calendar3 text-primary"></i> <?php echo date('d/m/Y', strtotime($loc['visit_date'])); ?></span>
-                                <span class="memory-chip"><i class="bi bi-emoji-smile text-warning"></i> <?php echo htmlspecialchars($loc['feeling']); ?></span>
+                                <span class="memory-chip"><i class="bi bi-emoji-smile text-warning"></i> <?php echo getFeelingEmojiPhp($loc['feeling']) . ' ' . htmlspecialchars($loc['feeling']); ?></span>
                             </div>
                             <p class="small text-muted mb-2 text-truncate"><?php echo htmlspecialchars($loc['description']); ?></p>
                             <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -771,6 +798,24 @@
                                             echo 'Chưa đặt ngày';
                                         }
                                     ?></p>
+                                    <?php 
+                                    $feelings = [];
+                                    foreach ($item['checkins'] as $c) {
+                                        if (!empty($c['feeling'])) {
+                                            $feelings[] = $c['feeling'];
+                                        }
+                                    }
+                                    $feelings = array_unique($feelings);
+                                    if (!empty($feelings)):
+                                    ?>
+                                        <div class="d-flex flex-wrap gap-1 mt-2">
+                                            <?php foreach ($feelings as $f): ?>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill" style="font-size: 10px;">
+                                                    <?php echo getFeelingEmojiPhp($f); ?> <?php echo htmlspecialchars($f); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 
                                 <!-- Overlapping avatars of members -->
@@ -828,7 +873,7 @@
                                         <div class="locket-stack-card position-absolute w-100 h-100 rounded-4 overflow-hidden shadow cursor-grab d-flex flex-column" 
                                              style="z-index: <?php echo $z_index; ?>; transform: translateY(<?php echo $offset_y; ?>px) scale(<?php echo $scale; ?>) rotate(<?php echo $rot; ?>deg); touch-action: none;"
                                              data-index="<?php echo $idx; ?>">
-                                             <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" class="w-100 h-100 object-fit-cover rounded-2" style="pointer-events: none;">
+                                             <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" class="w-100 h-100 object-fit-contain rounded-2" style="pointer-events: none; background: #0f172a;">
                                              <?php if ($idx == 0 && $photo_count > 1): ?>
                                                  <div class="position-absolute bg-black bg-opacity-75 text-white px-2 py-1 rounded-pill d-flex align-items-center gap-1" style="font-size: 9px; pointer-events: none; opacity: 0.85; bottom: -20px; left: 50%; transform: translateX(-50%); z-index: 5;">
                                                      <i class="bi bi-hand-index-thumb-fill text-warning"></i> Vuốt để lật ảnh
@@ -862,7 +907,7 @@
                                                     <div class="overflow-hidden">
                                                         <div class="fw-bold small text-truncate text-dark" style="font-size: 12px;"><?php echo htmlspecialchars($c['place_name']); ?></div>
                                                         <div class="text-muted text-truncate" style="font-size: 10px;">
-                                                            <?php echo htmlspecialchars($c['full_name'] ?: $c['username']); ?> - <?php echo htmlspecialchars($c['feeling']); ?>
+                                                            <?php echo htmlspecialchars($c['full_name'] ?: $c['username']); ?> - <?php echo getFeelingEmojiPhp($c['feeling']); ?> <?php echo htmlspecialchars($c['feeling']); ?>
                                                         </div>
                                                     </div>
                                                 </div>
