@@ -3843,7 +3843,8 @@
                 if (Date.now() - clickTime < 250 && Math.abs(currentX) < 10 && Math.abs(currentY) < 10) {
                     const tripId = container.dataset.tripId;
                     const idx = clone.dataset.index;
-                    const titleEl = container.closest('.timeline-body').querySelector('.fw-bold');
+                    const cardEl = container.closest('.trip-album-card');
+                    const titleEl = cardEl ? cardEl.querySelector('.fw-bold') : null;
                     const title = titleEl ? titleEl.textContent.trim() : 'Album Chuyến đi';
                     openTripGallery(tripId, parseInt(idx), title);
                 }
@@ -3876,7 +3877,8 @@
                 if (Date.now() - clickTime < 250 && Math.abs(currentX) < 15 && Math.abs(currentY) < 15) {
                     const tripId = container.dataset.tripId;
                     const idx = clone.dataset.index;
-                    const titleEl = container.closest('.timeline-body').querySelector('.fw-bold');
+                    const cardEl = container.closest('.trip-album-card');
+                    const titleEl = cardEl ? cardEl.querySelector('.fw-bold') : null;
                     const title = titleEl ? titleEl.textContent.trim() : 'Album Chuyến đi';
                     openTripGallery(tripId, parseInt(idx), title);
                 }
