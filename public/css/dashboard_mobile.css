@@ -480,7 +480,7 @@ h6.fw-bold { color: var(--text-strong); font-size: 16px; font-weight: 700; margi
     width: 56px; height: 56px; border-radius: 50%;
     background: var(--surface); color: var(--primary);
     display: flex; align-items: center; justify-content: center; font-size: 24px;
-    box-shadow: var(--neu-shadow-flat); cursor: pointer; z-index: 800; transition: all .2s;
+    box-shadow: var(--neu-shadow-flat); cursor: pointer; z-index: 5000 !important; transition: all .2s;
 }
 .ai-chat-fab:active { box-shadow: var(--neu-shadow-pressed); }
 @media (min-width: 480px) { .ai-chat-fab { right: calc(50vw - 240px + 20px); } }
@@ -693,7 +693,7 @@ h6.fw-bold { color: var(--text-strong); font-size: 16px; font-weight: 700; margi
     -webkit-backdrop-filter: blur(20px);
     border-radius: var(--radius-lg);
     box-shadow: var(--neu-shadow-flat);
-    z-index: 800;
+    z-index: 5000 !important;
     flex-direction: column;
     overflow: hidden;
     animation: slideUp .3s ease;

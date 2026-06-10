@@ -32,8 +32,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="css/style.css?v=3.6">
+    <link rel="stylesheet" href="css/style.css?v=3.7">
     <style>
+        /* Force display for AI Chat Window */
+        .ai-chat-window.active, .ai-chat-window.open { display: flex !important; z-index: 5000 !important; }
+        
         /* Force styling for Leaflet Custom Markers */
         .custom-map-marker {
             position: relative !important;
@@ -305,7 +308,7 @@
     <!-- Script forcing HTTPS removed to allow local network IP access -->
     
     
-    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.6">
+    <link rel="stylesheet" href="css/dashboard_mobile.css?v=3.7">
 </head>
 <body>
 <?php
@@ -447,7 +450,7 @@
         </form>
 
         <!-- Chat Button (Floating over map) -->
-        <div class="chat-map-btn" onclick="toggleChatWidget()">
+        <div class="chat-map-btn" onclick="toggleAIChat()">
             <i class="bi bi-chat-text"></i>
         </div>
 
@@ -458,7 +461,6 @@
             <button type="button" id="mapFilterToggleBtn" onclick="toggleMapFilterPanel()" title="Bộ lọc bản đồ"><i class="bi bi-funnel-fill"></i></button>
             <button type="button" class="active" id="followLocationBtn" onclick="toggleFollowLocation()" title="Theo dõi vị trí thực tế"><i class="bi bi-crosshair"></i></button>
             <button type="button" onclick="refreshMyLocation()" title="Định vị lại (GPS chính xác)"><i class="bi bi-arrow-clockwise"></i></button>
-            <button type="button" onclick="window.location.href='index.php?url=auth/logout'" title="Đăng xuất" style="background: rgba(239, 68, 68, 0.8);"><i class="bi bi-box-arrow-right"></i></button>
         </div>
 
         <div id="mapFilterDropdown" class="map-filter-dropdown">
@@ -1219,6 +1221,10 @@
                             <div class="badge-locked-overlay"><i class="bi bi-lock-fill"></i></div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="mt-4 pt-3 border-top d-grid">
+                    <a href="index.php?url=auth/logout" class="btn btn-danger rounded-pill fw-bold py-2"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a>
                 </div>
             </div>
         </div>
@@ -2787,95 +2793,7 @@
             .catch(e => console.log(e));
     }, 10000);
 
-    // AI Chat Widget
-    const chatWidget = document.getElementById('aiChatWidget');
-    const chatHistory = document.getElementById('chatHistory');
-    const chatInput = document.getElementById('chatInput');
-
-    function toggleChatWidget() {
-        chatWidget.classList.toggle('open');
-        if (chatWidget.classList.contains('open')) {
-            chatInput.focus();
-        }
-    }
-
-    function closeChatWidget() {
-        chatWidget.classList.remove('open');
-    }
-
-    function setChatPrompt(text) {
-        chatInput.value = text;
-        chatInput.focus();
-    }
-
-    function appendChatMessage(role, message) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'chat-message ' + role;
-
-        const avatar = document.createElement('div');
-        avatar.className = 'avatar';
-        avatar.textContent = role === 'user' ? 'T' : 'AI';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.textContent = message;
-
-        wrapper.appendChild(avatar);
-        wrapper.appendChild(bubble);
-        chatHistory.appendChild(wrapper);
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-
-    function getAiCoords() {
-        if (typeof currentLocationMarker !== 'undefined' && currentLocationMarker) {
-            const p = currentLocationMarker.getLatLng();
-            return { latitude: p.lat, longitude: p.lng };
-        }
-        const latEl = document.getElementById('lat');
-        const lngEl = document.getElementById('lng');
-        if (latEl && lngEl && latEl.value && lngEl.value) {
-            return { latitude: latEl.value, longitude: lngEl.value };
-        }
-        return { latitude: '', longitude: '' };
-    }
-
-    function sendChatMessage() {
-        const question = chatInput.value.trim();
-        if (!question) return;
-
-        appendChatMessage('user', question);
-        chatInput.value = '';
-
-        const loading = document.createElement('div');
-        loading.className = 'chat-message assistant';
-        loading.innerHTML = '<div class="avatar">AI</div><div class="bubble">Đang phân tích và tư vấn...</div>';
-        chatHistory.appendChild(loading);
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-
-        const coords = getAiCoords();
-        fetch('index.php?url=ai/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                question: question,
-                latitude: coords.latitude,
-                longitude: coords.longitude
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            loading.remove();
-            if (data.success) {
-                appendChatMessage('assistant', data.message);
-            } else {
-                appendChatMessage('assistant', 'Có lỗi: ' + data.message);
-            }
-        })
-        .catch(() => {
-            loading.remove();
-            appendChatMessage('assistant', 'Không thể kết nối đến AI. Vui lòng thử lại');
-        });
-    }
+    // Old AI Chat Widget code removed. Using toggleAIChat instead.
 
     // Mobile Navigation Logic
     const sidebar = document.querySelector('.sidebar');
@@ -2883,9 +2801,9 @@
     const overlay = document.getElementById('sidebarOverlay');
 
     function closeAllSidebars() {
-        sidebar.classList.remove('mobile-open');
-        socialSidebar.classList.remove('mobile-open');
-        overlay.classList.remove('show');
+        if (sidebar) sidebar.classList.remove('mobile-open');
+        if (socialSidebar) socialSidebar.classList.remove('mobile-open');
+        if (overlay) overlay.classList.remove('show');
         
         // Reset nav active state to Map
         document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
@@ -2893,7 +2811,7 @@
         if (mapTab) mapTab.classList.add('active');
         
         // Ensure map layout is correct after resizing
-        setTimeout(() => { map.invalidateSize(); }, 300);
+        setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 300);
     }
 
     if (overlay) {
@@ -2909,13 +2827,13 @@
         if (tab === 'map') {
             closeAllSidebars();
         } else if (tab === 'profile') {
-            socialSidebar.classList.remove('mobile-open');
-            sidebar.classList.add('mobile-open');
-            overlay.classList.add('show');
+            if (socialSidebar) socialSidebar.classList.remove('mobile-open');
+            if (sidebar) sidebar.classList.add('mobile-open');
+            if (overlay) overlay.classList.add('show');
         } else if (tab === 'social') {
-            sidebar.classList.remove('mobile-open');
-            socialSidebar.classList.add('mobile-open');
-            overlay.classList.add('show');
+            if (sidebar) sidebar.classList.remove('mobile-open');
+            if (socialSidebar) socialSidebar.classList.add('mobile-open');
+            if (overlay) overlay.classList.add('show');
         }
     }
 
@@ -3275,7 +3193,17 @@
     
     <script>
     function toggleAIChat() {
-        document.getElementById('aiChatWindow').classList.toggle('open'); // Sửa class toggle từ active thành open để khớp với css .ai-chat-window.open
+        const win = document.getElementById('aiChatWindow');
+        if (win) {
+            win.classList.toggle('active');
+            win.classList.toggle('open');
+            if (win.classList.contains('active') || win.classList.contains('open')) {
+                const input = document.getElementById('aiChatInput');
+                if (input) {
+                    setTimeout(() => input.focus(), 100);
+                }
+            }
+        }
     }
 
     function setAIChatQuestion(text) {
