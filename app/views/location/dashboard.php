@@ -754,7 +754,7 @@
                 <?php foreach($timeline_items as $item): ?>
                     <?php if ($item['type'] === 'standalone'): ?>
                         <?php $loc = $item['loc']; ?>
-                        <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)">
+                        <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" <?php if (!empty($loc['latitude']) && !empty($loc['longitude'])): ?>onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)"<?php endif; ?>>
                             <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, <?php echo htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8'); ?>)">
                                 <?= renderMedia($loc['image'], 160) ?>
                                 <?php if($loc['image']): ?>
@@ -925,7 +925,7 @@
                                     <h6 class="small fw-bold text-muted mb-2">CÁC ĐIỂM DỪNG CHÂN (<?php echo count($item['checkins']); ?>)</h6>
                                     <div class="d-flex flex-column gap-2" style="max-height: 200px; overflow-y: auto; scrollbar-width: none;">
                                         <?php foreach ($item['checkins'] as $c): ?>
-                                            <div class="p-2 border rounded-3 bg-light bg-opacity-50 d-flex align-items-center justify-content-between cursor-pointer hover-bg-light" onclick="focusMap(<?php echo $c['latitude']; ?>, <?php echo $c['longitude']; ?>, true)">
+                                            <div class="p-2 border rounded-3 bg-light bg-opacity-50 d-flex align-items-center justify-content-between cursor-pointer hover-bg-light" <?php if (!empty($c['latitude']) && !empty($c['longitude'])): ?>onclick="focusMap(<?php echo $c['latitude']; ?>, <?php echo $c['longitude']; ?>, true)"<?php endif; ?>>
                                                 <div class="d-flex align-items-center gap-2 overflow-hidden">
                                                     <div class="avatar-placeholder" style="width: 22px; height: 22px; border-radius: 50%; font-size: 9px; display:flex; align-items:center; justify-content:center; background:#e0f2fe; color:#0d6efd; flex-shrink:0;">
                                                         <?php if ($c['user_avatar']): ?>
@@ -1072,14 +1072,17 @@
                                 <p class="small text-muted mb-2"><?php echo htmlspecialchars($t['description']); ?></p>
                                 
                                 <?php if (!empty($t['photos'])): ?>
-                                    <div class="d-flex gap-2 mb-3 overflow-auto py-1" onclick="event.stopPropagation()" style="scrollbar-width: none;">
-                                        <?php foreach ($t['photos'] as $p): ?>
-                                            <div class="trip-card-photo" style="width: 50px; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); flex-shrink: 0; background: #eee;">
-                                                <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($p); ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'">
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
+                                                    <div class="d-flex gap-2 mb-3 overflow-auto py-1" onclick="event.stopPropagation()" style="scrollbar-width: none;">
+                                                        <?php foreach ($t['photos'] as $p): ?>
+                                                            <?php 
+                                                            $photo_path = is_array($p) ? $p['image_path'] : $p;
+                                                            ?>
+                                                            <div class="trip-card-photo" style="width: 50px; height: 50px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); flex-shrink: 0; background: #eee;">
+                                                                <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4140/4140044.png'">
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
 
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="badge bg-light text-dark"><i class="bi bi-calendar3"></i> <?php echo $t['start_date'] ? date('d/m/Y', strtotime($t['start_date'])) : 'N/A'; ?></small>
@@ -1786,6 +1789,8 @@
 
         // Draw new markers for savedLocations
         savedLocations.forEach(function(loc) {
+            if (!loc.latitude || !loc.longitude) return;
+            
             var customIcon = L.divIcon({
                 className: 'photo-marker-wrapper',
                 html: createCustomMarkerHtml(loc, false),
@@ -1822,6 +1827,8 @@
 
         // Draw new markers for friendLocations
         friendLocations.forEach(function(loc) {
+            if (!loc.latitude || !loc.longitude) return;
+            
             var friendIcon = L.divIcon({
                 className: 'photo-marker-wrapper',
                 html: createCustomMarkerHtml(loc, true),
@@ -2352,7 +2359,11 @@
         if (openPopup) {
             savedLocations.concat(friendLocations).forEach(loc => {
                 if(loc.latitude == lat && loc.longitude == lng) {
-                    setTimeout(() => markers[loc.id].openPopup(), 1500);
+                    setTimeout(() => {
+                        if (markers[loc.id]) {
+                            markers[loc.id].openPopup();
+                        }
+                    }, 1500);
                 }
             });
         }
@@ -3013,12 +3024,13 @@
 
         const visibleOwnPoints = savedLocations
             .filter(loc => {
+                if (!loc.latitude || !loc.longitude) return false;
                 let show = true;
                 if (feelingVal && loc.feeling !== feelingVal) show = false;
                 if (tripVal && Number(loc.trip_id) !== Number(tripVal)) show = false;
                 return show;
             })
-            .map(loc => [loc.latitude, loc.longitude]);
+            .map(loc => [Number(loc.latitude), Number(loc.longitude)]);
 
         if (visibleOwnPoints.length >= 2) {
             routeLine = L.polyline(visibleOwnPoints, {
