@@ -7,9 +7,16 @@
  * Lấy Gemini API Key miễn phí tại: https://aistudio.google.com/app/apikey
  */
 
-// Đặt mã API của bạn vào giữa 2 dấu nháy đơn
-// Ví dụ: putenv('GEMINI_API_KEY=AIzaSy...');
-putenv('GEMINI_API_KEY=');
+// Load private configuration if exists (keeps API keys off GitHub)
+$privateConfig = __DIR__ . '/ai_private.php';
+if (is_readable($privateConfig)) {
+    require_once $privateConfig;
+}
+
+// Default fallback env vars (keep empty on GitHub for security)
+if (!getenv('GEMINI_API_KEY')) {
+    putenv('GEMINI_API_KEY=');
+}
 
 // Hoặc nếu bạn muốn dùng OpenAI:
 // putenv('OPENAI_API_KEY=');

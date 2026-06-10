@@ -25,3 +25,4 @@ watch.ps1
 
 # Private configs
 config/db_config.php
+config/ai_private.php
