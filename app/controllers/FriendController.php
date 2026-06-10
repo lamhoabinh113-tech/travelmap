@@ -57,8 +57,10 @@ class FriendController {
                     header("Location: index.php?url=location/dashboard&friend_error=exists");
                 }
                 exit();
+            }
         }
     }
+
 
     // Tìm kiếm người dùng (AJAX)
     public function searchUsers() {

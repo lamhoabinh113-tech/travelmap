@@ -51,6 +51,12 @@
                 </div>
             <?php endif; ?>
 
+            <?php if(!empty($success)): ?>
+                <div class="alert alert-success border-0 rounded-4 mb-4" style="background: rgba(40, 167, 69, 0.2); color: #72dec2;">
+                    <i class="bi bi-check-circle me-2"></i> <?php echo $success; ?>
+                </div>
+            <?php endif; ?>
+
             <form action="index.php?url=auth/register" method="POST">
                 <div class="mb-3">
                     <label class="form-label text-white small fw-semibold">HỌ VÀ TÊN</label>

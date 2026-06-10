@@ -1375,7 +1375,7 @@
                 <h5 class="modal-title fw-bold">Chỉnh Sửa Kỷ Niệm</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="index.php?url=location/update" method="POST" enctype="multipart/form-data">
+            <form id="editMemoryForm" action="index.php?url=location/update" method="POST" enctype="multipart/form-data">
                 <div class="modal-body p-4">
                     <input type="hidden" name="id" id="edit_id">
                     
@@ -1469,7 +1469,7 @@
                 <h5 class="modal-title fw-bold">Tạo Chuyến Đi Mới</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="index.php?url=trip/create" method="POST">
+            <form id="createTripForm" action="index.php?url=trip/create" method="POST">
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">TÊN CHUYẾN ĐI</label>
@@ -4127,6 +4127,54 @@
         initLightbox();
         initCardSwipe();
         calculateAchievements();
+
+        // Prevent double submit on add memory form
+        const addMemForm = document.getElementById('addMemoryForm');
+        if (addMemForm) {
+            addMemForm.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    if (btn.disabled) {
+                        e.preventDefault();
+                        return;
+                    }
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang đăng...';
+                    btn.disabled = true;
+                }
+            });
+        }
+
+        // Prevent double submit on edit memory form
+        const editMemForm = document.getElementById('editMemoryForm');
+        if (editMemForm) {
+            editMemForm.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    if (btn.disabled) {
+                        e.preventDefault();
+                        return;
+                    }
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang cập nhật...';
+                    btn.disabled = true;
+                }
+            });
+        }
+
+        // Prevent double submit on create trip form
+        const createTripForm = document.getElementById('createTripForm');
+        if (createTripForm) {
+            createTripForm.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    if (btn.disabled) {
+                        e.preventDefault();
+                        return;
+                    }
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang tạo...';
+                    btn.disabled = true;
+                }
+            });
+        }
         
         // Lấy thông tin check-in mới từ URL params (Ưu tiên)
         const urlParams = new URLSearchParams(window.location.search);

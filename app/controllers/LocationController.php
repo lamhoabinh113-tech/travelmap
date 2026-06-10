@@ -444,7 +444,11 @@ class LocationController {
                 $total_files = count($_FILES['images']['name']);
                 for ($i = 0; $i < $total_files; $i++) {
                     if ($_FILES['images']['error'][$i] == 0) {
-                        $new_name = time() . "_" . $i . "_" . basename($_FILES["images"]["name"][$i]);
+                        $ext = pathinfo($_FILES["images"]["name"][$i], PATHINFO_EXTENSION);
+                        if (empty($ext)) {
+                            $ext = 'jpg';
+                        }
+                        $new_name = time() . "_" . $i . "_" . md5(uniqid(rand(), true)) . "." . $ext;
                         if (move_uploaded_file($_FILES["images"]["tmp_name"][$i], $target_dir . $new_name)) {
                             $uploaded_images[] = $new_name;
                             if ($featured_image == "") {
@@ -534,7 +538,11 @@ class LocationController {
                 $total_files = count($_FILES['new_images']['name']);
                 for ($i = 0; $i < $total_files; $i++) {
                     if ($_FILES['new_images']['error'][$i] == 0) {
-                        $new_name = time() . "_add_" . $i . "_" . basename($_FILES["new_images"]["name"][$i]);
+                        $ext = pathinfo($_FILES["new_images"]["name"][$i], PATHINFO_EXTENSION);
+                        if (empty($ext)) {
+                            $ext = 'jpg';
+                        }
+                        $new_name = time() . "_add_" . $i . "_" . md5(uniqid(rand(), true)) . "." . $ext;
                         if (move_uploaded_file($_FILES["new_images"]["tmp_name"][$i], $target_dir . $new_name)) {
                             $uploaded_images[] = $new_name;
                         }

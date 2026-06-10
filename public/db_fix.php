@@ -67,6 +67,7 @@ try {
         UNIQUE KEY `unique_member` (`trip_id`, `user_id`),
         FOREIGN KEY (`trip_id`) REFERENCES `trips`(`id`) ON DELETE CASCADE,
         FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
     echo "ℹ️ Đã kiểm tra bảng <b>trip_members</b>.<br>";
     
     // 6. Tự động tính toán lại XP của tất cả người dùng dựa trên số lượng kỷ niệm đã đăng
