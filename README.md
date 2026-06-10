@@ -1,125 +1,109 @@
-# 🗺️ Travel Memory Map — Lưu Giữ Ký ức Hành Trình
+# BÁO CÁO ĐỀ TÀI: XÂY DỰNG ỨNG DỤNG BẢN ĐỒ KÝ ỨC DU LỊCH (TRAVEL MEMORY MAP)
 
-**Travel Memory Map** là một ứng dụng web hiện đại giúp người dùng lưu giữ hành trình, đánh dấu các địa điểm đã đi qua, lưu giữ khoảnh khắc bằng hình ảnh/video, chia sẻ và kết nối với bạn bè cùng một Trợ lý AI du lịch thông minh.
-
-Dự án được xây dựng trên mô hình **MVC** tùy biến bằng **PHP thuần**, kết hợp bản đồ tương tác **Leaflet.js** và các hiệu ứng giao diện hiện đại.
+*Tài liệu hướng dẫn sử dụng và thuyết minh dự án dành cho Hội đồng Đánh giá / Giảng viên hướng dẫn.*
 
 ---
 
-## ✨ Các Tính Năng Nổi Bật
+## 📝 GIỚI THIỆU ĐỀ TÀI
 
-### 1. Bản Đồ Ký Ức Tương Tác (Interactive Map)
-* Tích hợp bản đồ Leaflet.js hỗ trợ nhiều giao diện (Sáng, Tối, Vệ tinh).
-* Định vị GPS chính xác thời gian thực để ghim địa điểm nhanh chóng.
-* Đánh dấu địa điểm du lịch bằng marker hình ảnh đại diện tùy chỉnh sống động.
-* Tìm kiếm địa điểm thông minh (Geocoding) toàn cầu.
-* Bộ lọc bản đồ trực quan theo chuyến đi hoặc theo trạng thái cảm xúc.
+### 1. Ý tưởng đề tài
+Trong thời đại số hóa, nhu cầu ghi lại hành trình xê dịch cá nhân ngày càng lớn. **Travel Memory Map** ra đời nhằm mục đích giúp người dùng số hóa các chuyến đi, ghim ảnh kỷ niệm trực quan trên bản đồ địa lý, kết nối giao lưu với bạn bè, đồng thời ứng dụng công nghệ Trí tuệ nhân tạo (AI) để giải quyết các bài toán lập lịch trình và tư vấn du lịch thực tế.
 
-### 2. Album Ảnh Locket & Dòng Thời Gian (Timeline Feed)
-* Lưu trữ kỷ niệm với tiêu đề, ngày ghé thăm, cảm xúc cá nhân và hình ảnh/video.
-* Bảng tin chia sẻ khoảnh khắc (Locket Feed) cập nhật các hoạt động mới nhất từ bạn bè.
-* Hệ thống tương tác bài viết phong phú: thả cảm xúc biểu tượng cảm xúc động (Like, Tim, Haha, Wow, Sad) kèm hiệu ứng pháo hoa cảm xúc (Emoji Burst).
-* Trình xem ảnh/video trực quan (Lightbox) mượt mà.
-
-### 3. Hệ Thống Bạn Bè & Xã Hội
-* Gửi/nhận lời mời kết bạn, quản lý danh sách tri kỷ.
-* Nhắn tin trò chuyện riêng tư trực tiếp trên bảng tin.
-* Chế độ quyền riêng tư bài đăng: Công khai (mọi người), Bạn bè (chỉ bạn bè), hoặc Cá nhân (chỉ mình tôi).
-
-### 4. Hệ Thống Cấp Độ & Thành Tựu (Gamification)
-* Tích lũy kinh nghiệm (XP) từ các hoạt động ghim điểm, đăng ảnh locket, kết bạn.
-* Bảng cấp độ cá nhân (Leveling): Tự động thăng cấp từ *Tân binh* đến *Thánh Check-in*.
-* Hệ thống Huy chương & Thành tựu đa dạng: *Nhà thám hiểm*, *Thánh Locket*, *Cú Đêm*, *Leo Núi*, *Tri Kỷ* tự động mở khóa theo hành vi thực tế.
-
-### 5. Trợ Lý AI Du Lịch Thông Minh (AI Companion)
-* Tích hợp **Google Gemini API** (hoặc OpenAI) để tư vấn lịch trình thông minh.
-* Gợi ý lộ trình phượt chi tiết giữa các địa danh (phương tiện, thời gian, điểm dừng chân).
-* Thiết kế lịch trình chi tiết (ngày, buổi Sáng - Trưa - Tối) theo gu của người dùng.
-* Tra cứu thời tiết thời gian thực cho điểm đến.
-* Viết caption mạng xã hội siêu chill, gợi ý góc chụp ảnh sống ảo và đặc sản vùng miền.
-* Cơ chế tự động fallback thông minh sang cơ sở dữ liệu offline nếu chưa cấu hình API Key.
-
-### 6. Trang Quản Trị (Admin Dashboard)
-* Thống kê tổng quan số lượng người dùng, địa điểm ghim, hình ảnh tải lên.
-* Quản lý tài khoản người dùng và phân quyền (Admin / User).
-* Theo dõi lịch sử hoạt động hệ thống (Activity Logs) và lịch sử đăng nhập thiết bị (Login Logs).
+### 2. Mục tiêu đề tài
+* **Về mặt công nghệ:** Ứng dụng mô hình kiến trúc MVC trong phát triển Web bằng PHP thuần, tích hợp thư viện bản đồ nguồn mở Leaflet.js và API của Google Gemini để nâng cao trải nghiệm ứng dụng thông minh.
+* **Về mặt thực tiễn:** Tạo ra một ứng dụng hoàn thiện có đầy đủ các luồng hoạt động từ Đăng nhập, Tương tác bản đồ, Mạng xã hội, Hệ thống tăng cấp/Huy chương (Gamification) và Trợ lý ảo AI.
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng
+## 🖥️ HƯỚNG DẪN TRẢI NGHIỆM CHỨC NĂNG (Dành cho Giảng viên)
 
-* **Frontend:** HTML5, CSS3 (Vanilla CSS neumorphism & glassmorphism), JavaScript (ES6+), Leaflet.js, Bootstrap 5, Bootstrap Icons.
-* **Backend:** PHP thuần (Custom MVC Architecture), Sessions, PDO Database Wrapper.
-* **Database:** MySQL / MariaDB.
-* **APIs & Services:** Google Gemini API, OpenStreetMap (Nominatim & Overpass POI), Open-Meteo Weather API.
+### 📌 Phần 1: Tài khoản trải nghiệm mặc định
+Giảng viên có thể đăng ký tài khoản mới trong 30 giây ngay tại giao diện đăng ký, hoặc sử dụng các tài khoản mẫu sau để kiểm tra nhanh:
+1. **Tài khoản Quản trị viên (Admin):**
+   * **Username:** `admin`
+   * **Password:** `Admin@123`
+2. **Tài khoản Người dùng (User):**
+   * Giảng viên có thể đăng ký trực tiếp một tài khoản User bất kỳ qua nút **Đăng ký** trên trang chủ.
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Chạy Local (XAMPP)
+### 📌 Phần 2: Luồng trải nghiệm và Hướng dẫn sử dụng
 
-### Bước 1: Sao chép mã nguồn
-```bash
-git clone https://github.com/lamhoabinh113-tech/travelmap.git
-cd travelmap
+```mermaid
+graph TD
+    A[Trang chủ Landing Page] -->|Đăng ký / Đăng nhập| B(Bản đồ Dashboard)
+    B -->|Click Bản đồ| C[Ghim địa điểm & Tải ảnh]
+    B -->|Click Robot FAB| D[Trò chuyện Trợ lý AI]
+    B -->|Click Avatar góc trái| E[Xem Hồ sơ & Huy chương]
+    B -->|Xem Bảng tin| F[Xem ảnh bạn bè & Thả cảm xúc]
+    B -->|Phần Quản trị| G[Trang Admin Dashboard]
 ```
 
-### Bước 2: Thiết lập Cơ sở dữ liệu
-1. Mở **XAMPP Control Panel** và khởi động dịch vụ **Apache** và **MySQL**.
-2. Truy cập vào trang quản trị cơ sở dữ liệu: `http://localhost/phpmyadmin`.
-3. Tạo một cơ sở dữ liệu mới tên là: `travel_memory_map`.
-4. Import file cơ sở dữ liệu mẫu `travel_memory_map_local.sql` (nằm ở thư mục gốc của dự án) vào cơ sở dữ liệu vừa tạo.
+#### 1. Đăng ký & Đăng nhập tài khoản
+* Truy cập trang chủ, nhấn **Đăng nhập** hoặc **Đăng ký**.
+* Hệ thống quản lý tài khoản bảo mật bằng thuật toán băm mật khẩu `password_hash` (BCRYPT) an toàn chống tấn công dò mật khẩu.
 
-### Bước 3: Cấu hình kết nối Database
-1. Truy cập thư mục `config/`.
-2. Tạo file `config/db_config.php` (nếu chưa có) và thiết lập thông tin kết nối MySQL của bạn:
-```php
-<?php
-// config/db_config.php - KHÔNG push file này lên GitHub
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');      // Mặc định của XAMPP
-define('DB_PASS', '');          // Mặc định trống
-define('DB_NAME', 'travel_memory_map');
-```
+#### 2. Thao tác trên Bản đồ Ký ức (Dashboard)
+* **Ghim kỷ niệm mới:** Nhấp chuột (hoặc chạm tay trên điện thoại) trực tiếp vào bất kỳ vị trí nào trên bản đồ. Một form **Lưu Giữ Kỷ Niệm** sẽ hiện ra. Nhập tên địa điểm, ngày ghé thăm, cảm xúc (vui, buồn, hạnh phúc...) và tải lên ảnh/video. Nhấn **Lưu kỷ niệm**. Một Marker chứa hình ảnh nhỏ của bạn sẽ hiện ra trực quan ngay tại điểm đó trên bản đồ.
+* **Đổi giao diện bản đồ:** Sử dụng cụm phím tròn nổi bên phải bản đồ để đổi nhanh sang chế độ bản đồ **Tối (Dark Mode)**, **Sáng (Light Mode)** hoặc **Vệ tinh (Satellite)**.
+* **Bộ lọc bản đồ:** Nhấn biểu tượng phễu lọc để chỉ hiển thị các ký ức theo chuyến đi hoặc theo trạng thái cảm xúc (ví dụ: chỉ hiện các điểm check-in "Bình yên").
+* **Định vị GPS:** Nhấn biểu tượng hồng tâm để tự động tìm kiếm vị trí thực tế của bạn trên bản đồ.
 
-### Bước 4: Cấu hình Trợ lý AI (Google Gemini Key)
-Để kích hoạt trí thông minh nhân tạo đầy đủ cho Trợ lý AI:
-1. Lấy mã API miễn phí từ Google tại: [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Tại thư mục `config/`, tạo file `ai_private.php` (file này đã được cấu hình ẩn khỏi Git để bảo mật):
-```php
-<?php
-// config/ai_private.php - KHÔNG push file này lên GitHub
-putenv('GEMINI_API_KEY=MÃ_API_KEY_CỦA_BẠN_Ở_ĐÂY');
-```
+#### 3. Tương tác Mạng xã hội (Locket Feed)
+* Cuộn xuống dưới bản đồ là khu vực **Bảng tin (Feed)**. Nơi đây hiển thị các hình ảnh Locket của bạn và bạn bè của bạn.
+* **Thả cảm xúc động:** Rê chuột vào nút thích để hiển thị menu cảm xúc sinh động (👍, ❤️, 😂, 😮, 😢). Khi click sẽ kích hoạt hiệu ứng pháo hoa cảm xúc (Emoji Burst) bay nhảy đẹp mắt.
+* **Nhắn tin riêng tư:** Ngay dưới mỗi bài viết của bạn bè, bạn có thể gửi tin nhắn trò chuyện trực tiếp với họ.
 
-### Bước 5: Trải nghiệm ứng dụng
-1. Di chuyển thư mục dự án `travelmap` vào thư mục gốc của Apache (`C:/xampp/htdocs/`).
-2. Mở trình duyệt và truy cập: `http://localhost/travelmap/public/index.php`.
+#### 4. Hệ thống Tăng cấp & Mở khóa Huy chương
+* Nhấn vào **Ảnh đại diện** ở góc trên bên trái bản đồ để mở cửa sổ **Hành trang**.
+* Tại đây hiển thị điểm Kinh nghiệm tích lũy (XP). Khi bạn thực hiện các hoạt động ghim điểm hoặc tương tác, điểm XP sẽ tăng lên và thăng cấp (ví dụ: từ *Tân binh xê dịch* lên *Thánh Check-in*).
+* **Mở khóa Huy chương:** Hệ thống sẽ tự động theo dõi hành vi và mở khóa huy chương tương ứng (ví dụ: Ghé thăm 3+ địa điểm mở khóa huy chương *Thám hiểm*; check-in sau 22h tối mở khóa huy chương *Cú đêm*...). Các huy chương bị khóa sẽ có biểu tượng ổ khóa xám.
 
----
+#### 5. Khám phá Trợ lý AI Thông minh
+* Nhấn vào nút tròn nổi có biểu tượng **Robot 🤖** (hoặc nút Chat trên bản đồ) ở góc dưới bên phải màn hình để mở khung chat **Travel Memory AI**.
+* **Nhập câu hỏi tự do:** Ví dụ: *"Lịch trình 3 ngày 2 đêm ở Hà Giang"*, *"Ăn gì ngon ở Đà Lạt?"*, *"Viết hộ caption chill ghim lên bản đồ đi biển"*.
+* **Sử dụng phím tắt nhanh:** Nhấp vào các thẻ gợi ý nhanh (như *Lộ trình Hà Giang*, *Sài Gòn - Đà Lạt*, *Ẩm thực Hải Dương*,...) để xem cách AI lập kế hoạch nhanh chóng.
+* **Cơ chế hoạt động:** Trợ lý sẽ phân tích địa điểm, tự động lấy thông tin thời tiết thời gian thực và gợi ý lịch trình chi tiết (Sáng - Trưa - Chiều - Tối) cực kỳ đúng trọng tâm.
 
-## 📂 Cấu Trúc Thư Mục Dự Án
-
-```text
-travelmap/
-├── app/
-│   ├── controllers/      # Điều hướng logic nghiệp vụ (AuthController, AiController,...)
-│   ├── models/           # Truy vấn cơ sở dữ liệu (LocationModel, TripModel,...)
-│   ├── views/            # Giao diện người dùng (home, dashboard, admin,...)
-│   └── data/             # Cơ sở dữ liệu du lịch offline (travel_knowledge_vn.php)
-├── config/
-│   ├── database.php      # Lớp kết nối PDO dùng chung
-│   ├── ai.php            # Nạp cấu hình AI
-│   └── ai_private.php    # (Bảo mật) Chứa khóa API cục bộ
-├── database/             # Chứa tài liệu / script bổ trợ database
-├── public/
-│   ├── css/              # Bộ CSS thiết kế giao diện (style.css, dashboard_mobile.css,...)
-│   ├── uploads/          # Lưu trữ hình ảnh kỷ niệm & ảnh đại diện
-│   └── index.php         # Front Controller điều phối mọi request (Routing)
-├── travel_memory_map_local.sql # File xuất database mẫu
-└── README.md             # File hướng dẫn này
-```
+#### 6. Hệ thống dành cho Quản trị viên (Admin)
+* Đăng nhập bằng tài khoản `admin` để truy cập trang quản trị.
+* Xem biểu đồ thống kê tăng trưởng hệ thống.
+* Quản lý thông tin tài khoản người dùng, đổi mật khẩu hoặc phân quyền.
+* Theo dõi **Activity Logs** ghi lại toàn bộ hoạt động trong hệ thống (ai vừa ghim điểm, ai vừa kết bạn...) và **Login Logs** phát hiện các thiết bị/trình duyệt đăng nhập trái phép.
 
 ---
 
-## 🛡️ Bản Quyền & Giấy Phép
-Dự án được phát triển phi thương mại nhằm mục đích học tập và lưu trữ kỷ niệm du lịch cá nhân. Làm với ❤️ tại Việt Nam. 🇻🇳
+## 🛠️ CÔNG NGHỆ VÀ KIẾN TRÚC HỆ THỐNG
+
+### 1. Kiến trúc phần mềm (Custom MVC)
+Dự án được triển khai theo cấu trúc **Model - View - Controller (MVC)** thuần khiết, giúp mã nguồn mạch lạc, dễ bảo trì:
+* **Controller:** Xử lý nghiệp vụ logic, nhận dữ liệu đầu vào và điều phối dữ liệu qua Model để hiển thị lên View (Ví dụ: `LocationController.php`, `AiController.php`).
+* **Model:** Tương tác trực tiếp với CSDL qua PDO, thực hiện các truy vấn bảo mật (`LocationModel.php`, `TripModel.php`).
+* **View:** Giao diện hiển thị trực quan sử dụng HTML, CSS và JavaScript (`dashboard.php`, `ai_chat.php`).
+
+### 2. Thiết kế Cơ sở dữ liệu (MySQL / MariaDB)
+Sơ đồ cơ sở dữ liệu gồm các bảng chính:
+* `users`: Lưu trữ thông tin tài khoản, mật khẩu băm, phân quyền và điểm tích lũy XP.
+* `locations`: Lưu trữ các tọa độ GPS địa điểm ghim, tên địa danh, hình ảnh, video, cảm xúc và chế độ riêng tư.
+* `trips`: Liên kết các địa điểm ghim vào chung một chuyến đi (ví dụ: Tour đi Tây Bắc).
+* `friends`: Quản lý danh sách bạn bè, trạng thái lời mời (Pending / Accepted).
+* `messages`: Lưu lịch sử nhắn tin riêng tư giữa các tài khoản.
+* `activity_logs` & `login_logins`: Lưu nhật ký bảo mật hệ thống.
+
+---
+
+## 🚀 HƯỚNG DẪN CÀI ĐẶT DỰ ÁN TRÊN XAMPP
+
+1. Tải toàn bộ mã nguồn về máy và giải nén đặt vào thư mục `C:\xampp\htdocs\travelmap`.
+2. Tạo CSDL tên `travel_memory_map` trong phpMyAdmin và import file SQL mẫu `travel_memory_map_local.sql` đính kèm trong thư mục dự án.
+3. Cấu hình file kết nối CSDL tại [config/db_config.php](file:///c:/xampp/htdocs/travel-memory-map/config/db_config.php) cho đúng với tài khoản MySQL cục bộ của bạn.
+4. Cấu hình Gemini API Key bằng cách tạo file [config/ai_private.php](file:///c:/xampp/htdocs/travel-memory-map/config/ai_private.php) rồi điền:
+   ```php
+   <?php
+   putenv('GEMINI_API_KEY=MÃ_API_KEY_CỦA_BẠN');
+   ```
+5. Mở trình duyệt web và truy cập địa chỉ: `http://localhost/travelmap/public/index.php`.
+
+---
+
+*Hội sinh viên & Nhóm phát triển dự án xin trân trọng cảm ơn Thầy Cô đã dành thời gian đánh giá đề tài này!*
