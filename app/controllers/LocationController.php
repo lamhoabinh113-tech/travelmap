@@ -89,8 +89,8 @@ class LocationController {
             // Lấy tất cả ảnh của từng chuyến đi (có lọc quyền riêng tư)
             foreach ($trips as &$t) {
                 $q_photos = "
-                    SELECT DISTINCT image_path FROM (
-                        SELECT image as image_path, visit_date, id FROM locations 
+                    SELECT DISTINCT image_path, place_name, feeling, location_id FROM (
+                        SELECT image as image_path, place_name, feeling, id as location_id, visit_date, id FROM locations 
                         WHERE trip_id = :trip_id AND image IS NOT NULL AND image != ''
                           AND (
                               user_id = :uid
@@ -112,7 +112,7 @@ class LocationController {
                               )
                           )
                         UNION
-                        SELECT li.image_path, l.visit_date, li.id FROM location_images li 
+                        SELECT li.image_path, l.place_name, l.feeling, l.id as location_id, l.visit_date, li.id FROM location_images li 
                         JOIN locations l ON li.location_id = l.id 
                         WHERE l.trip_id = :trip_id AND li.image_path IS NOT NULL AND li.image_path != ''
                           AND (
@@ -142,7 +142,7 @@ class LocationController {
                     ':trip_id' => $t['id'],
                     ':uid' => $user_id
                 ]);
-                $t['photos'] = $s_photos->fetchAll(PDO::FETCH_COLUMN);
+                $t['photos'] = $s_photos->fetchAll(PDO::FETCH_ASSOC);
                 $trip_photos_data[$t['id']] = $t['photos'];
             }
             unset($t);
@@ -499,9 +499,28 @@ class LocationController {
                 }
 
                 $conn->commit();
+                $is_ajax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest');
+                if ($is_ajax) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Lưu kỷ niệm thành công!',
+                        'new_id' => $location_id,
+                        'latitude' => $this->locationModel->latitude,
+                        'longitude' => $this->locationModel->longitude
+                    ]);
+                    exit();
+                }
                 header("Location: index.php?url=location/dashboard&success=1&new_id=" . $location_id . "&lat=" . $this->locationModel->latitude . "&lng=" . $this->locationModel->longitude);
             } catch (Exception $e) {
                 $conn->rollBack();
+                $is_ajax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest');
+                if ($is_ajax) {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Lỗi: ' . $e->getMessage()
+                    ]);
+                    exit();
+                }
                 header("Location: index.php?url=location/dashboard&error=1");
             }
             exit();
@@ -567,9 +586,26 @@ class LocationController {
                 }
 
                 $this->db->commit();
+                $is_ajax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest');
+                if ($is_ajax) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Cập nhật kỷ niệm thành công!',
+                        'location_id' => $location_id
+                    ]);
+                    exit();
+                }
                 header("Location: index.php?url=location/dashboard&update_success=1");
             } catch (Exception $e) {
                 $this->db->rollBack();
+                $is_ajax = isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest');
+                if ($is_ajax) {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Lỗi: ' . $e->getMessage()
+                    ]);
+                    exit();
+                }
                 header("Location: index.php?url=location/dashboard&error=update_failed");
             }
             exit();
@@ -592,6 +628,11 @@ class LocationController {
                     }
                 }
             }
+        }
+        $is_ajax = isset($_GET['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest');
+        if ($is_ajax) {
+            echo json_encode(['success' => true, 'message' => 'Xóa kỷ niệm thành công!']);
+            exit();
         }
         header("Location: index.php?url=location/dashboard");
         exit();

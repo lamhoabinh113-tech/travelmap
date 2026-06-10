@@ -306,15 +306,22 @@ html, body {
 .memory-img {
     width: 100%;
     height: auto;
-    aspect-ratio: 4/3;
-    object-fit: cover;
+    max-height: 350px;
+    object-fit: contain;
+    background-color: #0f172a;
     display: block;
     border-radius: 12px;
 }
 
 /* Video same ratio */
 .memory-img-wrapper video {
-    width: 100%; height: auto; aspect-ratio: 4/3; object-fit: cover; display: block; border-radius: 12px;
+    width: 100%;
+    height: auto;
+    max-height: 350px;
+    object-fit: contain;
+    background-color: #0f172a;
+    display: block;
+    border-radius: 12px;
 }
 
 /* Album/Video badge */

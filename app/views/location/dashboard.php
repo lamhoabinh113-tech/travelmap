@@ -136,18 +136,29 @@
             transform-origin: bottom center !important;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) !important;
         }
-        /* Fan-like spread hover effect */
-        .locket-stack-container:hover .locket-stack-card[data-index="0"] {
-            transform: translateY(0px) rotate(0deg) scale(1) !important;
+        /* Dynamic symmetrical fan-out hover effect based on current stack DOM order */
+        .locket-stack-container:hover .locket-stack-card:nth-child(1) {
+            transform: translateY(-8px) rotate(0deg) scale(1.02) !important;
+            z-index: 10 !important;
         }
-        .locket-stack-container:hover .locket-stack-card[data-index="1"] {
-            transform: translateX(45px) translateY(-5px) rotate(10deg) scale(0.96) !important;
+        .locket-stack-container:hover .locket-stack-card:nth-child(2) {
+            transform: translateX(65px) translateY(-5px) rotate(10deg) scale(0.98) !important;
+            z-index: 9 !important;
         }
-        .locket-stack-container:hover .locket-stack-card[data-index="2"] {
-            transform: translateX(-45px) translateY(-5px) rotate(-10deg) scale(0.96) !important;
+        .locket-stack-container:hover .locket-stack-card:nth-child(3) {
+            transform: translateX(-65px) translateY(-5px) rotate(-10deg) scale(0.98) !important;
+            z-index: 8 !important;
         }
-        .locket-stack-container:hover .locket-stack-card[data-index="3"] {
-            transform: translateX(90px) translateY(2px) rotate(20deg) scale(0.92) !important;
+        .locket-stack-container:hover .locket-stack-card:nth-child(4) {
+            transform: translateX(120px) translateY(5px) rotate(20deg) scale(0.94) !important;
+            z-index: 7 !important;
+        }
+        .locket-stack-card img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            background-color: #0f172a !important;
+            border-radius: 6px !important;
         }
         
         /* Floating Emoji CSS */
@@ -861,19 +872,38 @@
                             $photo_count = count($photos);
                             if ($photo_count > 0): 
                             ?>
-                                <div class="locket-stack-container mb-3 position-relative" style="height: 250px; margin-top: 15px; margin-bottom: 25px;" data-trip-id="<?php echo $item['trip_id']; ?>">
+                                <div class="locket-stack-container mb-3 position-relative" style="height: 320px; margin-top: 15px; margin-bottom: 25px;" data-trip-id="<?php echo $item['trip_id']; ?>">
                                     <?php 
-                                    foreach ($photos as $idx => $photo_path): 
+                                    foreach ($photos as $idx => $photo): 
                                         if ($idx >= 4) continue; // visually stack up to 4 cards
                                         $z_index = $photo_count - $idx;
                                         $offset_y = $idx * 6;
                                         $scale = 1 - ($idx * 0.04);
                                         $rot = ($idx % 2 == 0 ? 1 : -1) * min(3, $idx * 1.5);
+                                        
+                                        $photo_path = is_array($photo) ? $photo['image_path'] : $photo;
+                                        $place_name = is_array($photo) ? $photo['place_name'] : '';
+                                        $feeling = is_array($photo) ? $photo['feeling'] : '';
                                     ?>
                                         <div class="locket-stack-card position-absolute w-100 h-100 rounded-4 overflow-hidden shadow cursor-grab d-flex flex-column" 
                                              style="z-index: <?php echo $z_index; ?>; transform: translateY(<?php echo $offset_y; ?>px) scale(<?php echo $scale; ?>) rotate(<?php echo $rot; ?>deg); touch-action: none;"
                                              data-index="<?php echo $idx; ?>">
-                                             <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" class="w-100 h-100 object-fit-contain rounded-2" style="pointer-events: none; background: #0f172a;">
+                                             <div class="position-relative flex-grow-1" style="background: #0f172a;">
+                                                 <img src="<?php echo UPLOADS_URL . '/' . htmlspecialchars($photo_path); ?>" class="w-100 h-100 object-fit-contain rounded-2" style="pointer-events: none;">
+                                                 <?php if (!empty($place_name)): ?>
+                                                     <!-- Premium overlay for place name & feeling -->
+                                                     <div class="position-absolute bottom-0 start-0 end-0 p-2 text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(transparent, rgba(15, 23, 42, 0.95)); z-index: 2;">
+                                                         <span class="small fw-bold text-truncate" style="max-width: 70%; font-size: 10px;">
+                                                             <i class="bi bi-geo-alt-fill text-danger me-1"></i><?php echo htmlspecialchars($place_name); ?>
+                                                         </span>
+                                                         <?php if (!empty($feeling)): ?>
+                                                             <span class="badge bg-dark bg-opacity-75 text-warning rounded-pill" style="font-size: 9px; padding: 3px 6px;">
+                                                                 <?php echo getFeelingEmojiPhp($feeling); ?> <?php echo htmlspecialchars($feeling); ?>
+                                                             </span>
+                                                         <?php endif; ?>
+                                                     </div>
+                                                 <?php endif; ?>
+                                             </div>
                                              <?php if ($idx == 0 && $photo_count > 1): ?>
                                                  <div class="position-absolute bg-black bg-opacity-75 text-white px-2 py-1 rounded-pill d-flex align-items-center gap-1" style="font-size: 9px; pointer-events: none; opacity: 0.85; bottom: -20px; left: 50%; transform: translateX(-50%); z-index: 5;">
                                                      <i class="bi bi-hand-index-thumb-fill text-warning"></i> Vuốt để lật ảnh
@@ -1727,124 +1757,159 @@
     var savedLocations = <?php echo json_encode($locations); ?>;
     var friendLocations = <?php echo json_encode((!isset($is_friend_view) && isset($friend_locations)) ? $friend_locations : []); ?>;
     var markers = [];
-    
-    savedLocations.forEach(function(loc) {
-        var customIcon = L.divIcon({
-            className: 'photo-marker-wrapper',
-            html: createCustomMarkerHtml(loc, false),
-            iconSize: [48, 48],
-            iconAnchor: [24, 48],
-            popupAnchor: [0, -48]
-        });
+    var routeLine = null;
+    window.journeyCircles = [];
+    var journeyPoints = [];
 
-        var marker = L.marker([loc.latitude, loc.longitude], { icon: customIcon }).addTo(map);
-        marker.on('click', function(e) {
-            triggerBumpRipple(e.latlng.lat, e.latlng.lng);
-        });
-        
-        var popupContent = `
-            <div class="p-2" style="width: 240px">
-                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer">` : ''}
-                <h6 class="fw-bold mb-1">${loc.place_name}</h6>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling}</span>
-                </div>
-                <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
-                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">Xem Album</button>
-            </div>
-        `;
-        
-        marker.bindPopup(popupContent, {
-            className: 'premium-popup',
-            maxWidth: 300
-        });
-        
-        markers[loc.id] = marker;
-    });
-
-    friendLocations.forEach(function(loc) {
-        var friendIcon = L.divIcon({
-            className: 'photo-marker-wrapper',
-            html: createCustomMarkerHtml(loc, true),
-            iconSize: [48, 48],
-            iconAnchor: [24, 48],
-            popupAnchor: [0, -48]
-        });
-
-        var friendMarker = L.marker([loc.latitude, loc.longitude], { icon: friendIcon }).addTo(map);
-        friendMarker.on('click', function(e) {
-            triggerBumpRipple(e.latlng.lat, e.latlng.lng);
-        });
-        var friendPopup = `
-            <div class="p-2" style="width: 250px">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div class="avatar-placeholder" style="width:28px;height:28px;font-size:12px;border-radius:50%;background:#e0f2fe;color:#0d6efd;">
-                        ${(loc.username || '?').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <div class="small fw-bold text-primary">${loc.full_name || 'Bạn bè'}</div>
-                        <div class="text-muted" style="font-size:11px;">@${loc.username || ''}</div>
-                    </div>
-                </div>
-                ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
-                <h6 class="fw-bold mb-1">${loc.place_name}</h6>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling || ''}</span>
-                </div>
-                <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
-                <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">
-                    <i class="bi bi-images me-1"></i> Xem album
-                </button>
-            </div>
-        `;
-
-        friendMarker.bindPopup(friendPopup, {
-            className: 'premium-popup',
-            maxWidth: 310
-        });
-
-        markers[loc.id] = friendMarker;
-    });
-
-    const journeyPoints = savedLocations
-        .filter(loc => loc.latitude && loc.longitude)
-        .map(loc => [Number(loc.latitude), Number(loc.longitude)])
-        .reverse();
-
-    let routeLine = null;
-    if (journeyPoints.length > 1) {
-        routeLine = L.polyline(journeyPoints, {
-            color: '#22d3ee',
-            weight: 4,
-            opacity: 0.78,
-            dashArray: '10 12'
-        }).addTo(map);
-
-        // Marching ants animation loop using requestAnimationFrame
-        let offset = 0;
-        function animateMarchingAnts() {
-            offset = (offset - 1) % 22;
-            const el = routeLine.getElement();
-            if (el) {
-                el.style.strokeDashoffset = offset + 'px';
+    function drawMapMarkers() {
+        // Clear existing markers
+        for (var id in markers) {
+            if (markers[id]) {
+                map.removeLayer(markers[id]);
             }
-            requestAnimationFrame(animateMarchingAnts);
         }
-        setTimeout(() => {
-            requestAnimationFrame(animateMarchingAnts);
-        }, 500);
+        markers = [];
+
+        // Clear route line
+        if (routeLine) {
+            map.removeLayer(routeLine);
+            routeLine = null;
+        }
+
+        // Clear journey circles
+        if (window.journeyCircles) {
+            window.journeyCircles.forEach(function(c) {
+                if (c) map.removeLayer(c);
+            });
+        }
+        window.journeyCircles = [];
+
+        // Draw new markers for savedLocations
+        savedLocations.forEach(function(loc) {
+            var customIcon = L.divIcon({
+                className: 'photo-marker-wrapper',
+                html: createCustomMarkerHtml(loc, false),
+                iconSize: [48, 48],
+                iconAnchor: [24, 48],
+                popupAnchor: [0, -48]
+            });
+
+            var marker = L.marker([loc.latitude, loc.longitude], { icon: customIcon }).addTo(map);
+            marker.on('click', function(e) {
+                triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+            });
+            
+            var popupContent = `
+                <div class="p-2" style="width: 240px">
+                    ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer">` : ''}
+                    <h6 class="fw-bold mb-1">${loc.place_name}</h6>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling}</span>
+                    </div>
+                    <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
+                    <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">Xem Album</button>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent, {
+                className: 'premium-popup',
+                maxWidth: 300
+            });
+            
+            markers[loc.id] = marker;
+        });
+
+        // Draw new markers for friendLocations
+        friendLocations.forEach(function(loc) {
+            var friendIcon = L.divIcon({
+                className: 'photo-marker-wrapper',
+                html: createCustomMarkerHtml(loc, true),
+                iconSize: [48, 48],
+                iconAnchor: [24, 48],
+                popupAnchor: [0, -48]
+            });
+
+            var friendMarker = L.marker([loc.latitude, loc.longitude], { icon: friendIcon }).addTo(map);
+            friendMarker.on('click', function(e) {
+                triggerBumpRipple(e.latlng.lat, e.latlng.lng);
+            });
+            var friendPopup = `
+                <div class="p-2" style="width: 250px">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="avatar-placeholder" style="width:28px;height:28px;font-size:12px;border-radius:50%;background:#e0f2fe;color:#0d6efd;">
+                            ${(loc.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="small fw-bold text-primary">${loc.full_name || 'Bạn bè'}</div>
+                            <div class="text-muted" style="font-size:11px;">@${loc.username || ''}</div>
+                        </div>
+                    </div>
+                    ${loc.image ? `<img src="${uploadsUrl}/${loc.image}" class="img-fluid rounded-3 mb-2 shadow-sm" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))" style="cursor:pointer;max-height:150px;object-fit:cover;width:100%;">` : ''}
+                    <h6 class="fw-bold mb-1">${loc.place_name}</h6>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <small class="text-muted"><i class="bi bi-calendar-event"></i> ${loc.visit_date}</small>
+                        <span class="badge bg-primary-subtle text-primary rounded-pill">${loc.feeling || ''}</span>
+                    </div>
+                    <p class="small text-secondary mb-0">${loc.description || 'Không có mô tả'}</p>
+                    <button class="btn btn-primary btn-sm w-100 mt-2 rounded-pill" onclick="openAlbum(${loc.id}, decodeURIComponent('${encodeURIComponent(loc.place_name || 'Album').replace(/'/g, "%27")}'))">
+                        <i class="bi bi-images me-1"></i> Xem album
+                    </button>
+                </div>
+            `;
+
+            friendMarker.bindPopup(friendPopup, {
+                className: 'premium-popup',
+                maxWidth: 310
+            });
+
+            markers[loc.id] = friendMarker;
+        });
+
+        // Calculate journey points
+        journeyPoints = savedLocations
+            .filter(loc => loc.latitude && loc.longitude)
+            .map(loc => [Number(loc.latitude), Number(loc.longitude)])
+            .reverse();
+
+        if (journeyPoints.length > 1) {
+            routeLine = L.polyline(journeyPoints, {
+                color: '#22d3ee',
+                weight: 4,
+                opacity: 0.78,
+                dashArray: '10 12'
+            }).addTo(map);
+
+            // Marching ants animation loop using requestAnimationFrame
+            let offset = 0;
+            function animateMarchingAnts() {
+                if (!routeLine || !map.hasLayer(routeLine)) return;
+                offset = (offset - 1) % 22;
+                const el = routeLine.getElement();
+                if (el) {
+                    el.style.strokeDashoffset = offset + 'px';
+                    requestAnimationFrame(animateMarchingAnts);
+                }
+            }
+            setTimeout(() => {
+                requestAnimationFrame(animateMarchingAnts);
+            }, 500);
+        }
+
+        // Draw circles/pulses for stop points
+        journeyPoints.forEach((point, index) => {
+            var circ = L.circleMarker(point, {
+                radius: 26 + Math.min(index * 3, 18),
+                stroke: false,
+                fillColor: '#f43f5e',
+                fillOpacity: 0.12
+            }).addTo(map);
+            window.journeyCircles.push(circ);
+        });
     }
 
-    journeyPoints.forEach((point, index) => {
-        L.circleMarker(point, {
-            radius: 26 + Math.min(index * 3, 18),
-            stroke: false,
-            fillColor: '#f43f5e',
-            fillOpacity: 0.12
-        }).addTo(map);
-    });
+    // Draw markers initially
+    drawMapMarkers();
 
     function setMapTheme(theme) {
         map.removeLayer(activeMapLayer);
@@ -1871,10 +1936,14 @@
     }
 
     function fitJourneyRoute() {
+        var localJourneyPoints = savedLocations
+            .filter(loc => loc.latitude && loc.longitude)
+            .map(loc => [Number(loc.latitude), Number(loc.longitude)])
+            .reverse();
         if (routeLine) {
             map.fitBounds(routeLine.getBounds(), { padding: [60, 60] });
-        } else if (journeyPoints.length === 1) {
-            map.flyTo(journeyPoints[0], 15);
+        } else if (localJourneyPoints.length === 1) {
+            map.flyTo(localJourneyPoints[0], 15);
         }
     }
 
@@ -4173,53 +4242,255 @@
         initCardSwipe();
         calculateAchievements();
 
-        // Prevent double submit on add memory form
+        // Function to refresh dashboard components dynamically without page reload
+        window.refreshDashboardState = function() {
+            return fetch('index.php?url=location/dashboard')
+                .then(res => res.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Swap timeline/tabs content
+                    const newTimeline = doc.getElementById('tab-timeline');
+                    const oldTimeline = document.getElementById('tab-timeline');
+                    if (newTimeline && oldTimeline) {
+                        oldTimeline.innerHTML = newTimeline.innerHTML;
+                    }
+
+                    // Swap profile badge
+                    const newBadge = doc.querySelector('.profile-badge');
+                    const oldBadge = document.querySelector('.profile-badge');
+                    if (newBadge && oldBadge) {
+                        oldBadge.innerHTML = newBadge.innerHTML;
+                    }
+
+                    // Re-extract locations arrays from script content
+                    const scripts = doc.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        const content = script.textContent;
+                        if (content.includes('var savedLocations =')) {
+                            const savedMatch = content.match(/var savedLocations = ([^;]+);/);
+                            const friendMatch = content.match(/var friendLocations = ([^;]+);/);
+                            if (savedMatch) {
+                                savedLocations = JSON.parse(savedMatch[1]);
+                            }
+                            if (friendMatch) {
+                                friendLocations = JSON.parse(friendMatch[1]);
+                            }
+                        }
+                    });
+
+                    // Re-draw map markers
+                    if (typeof drawMapMarkers === 'function') {
+                        drawMapMarkers();
+                    }
+
+                    // Re-initialize Tinder swiping for stacked albums
+                    if (typeof initCardSwipe === 'function') {
+                        const containers = document.querySelectorAll('.locket-stack-container');
+                        containers.forEach(c => delete c.dataset.swipeInitialized);
+                        initCardSwipe();
+                    }
+
+                    // Sync choice elements/select boxes
+                    const newTripSelects = doc.querySelectorAll('#addMemoryForm select[name="trip_id"], #editMemoryForm select[name="trip_id"]');
+                    newTripSelects.forEach(newSelect => {
+                        const targetId = newSelect.closest('form').id;
+                        const oldSelect = document.querySelector(`#${targetId} select[name="trip_id"]`);
+                        if (oldSelect) {
+                            oldSelect.innerHTML = newSelect.innerHTML;
+                        }
+                    });
+                })
+                .catch(err => console.error("Error refreshing dashboard state:", err));
+        };
+
+        // Submit new memory with AJAX
         const addMemForm = document.getElementById('addMemoryForm');
         if (addMemForm) {
             addMemForm.addEventListener('submit', function(e) {
+                e.preventDefault();
                 const btn = this.querySelector('button[type="submit"]');
                 if (btn) {
-                    if (btn.disabled) {
-                        e.preventDefault();
-                        return;
-                    }
+                    if (btn.disabled) return;
                     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang đăng...';
                     btn.disabled = true;
                 }
+
+                const formData = new FormData(this);
+                formData.append('ajax', '1');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.reset();
+                        const modalEl = document.getElementById('addMemoryModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        
+                        showToast('Lưu kỷ niệm thành công!');
+                        
+                        refreshDashboardState().then(() => {
+                            if (data.latitude && data.longitude && map) {
+                                map.setView([data.latitude, data.longitude], 15);
+                                if (typeof triggerBumpRipple === 'function') {
+                                    triggerBumpRipple(data.latitude, data.longitude);
+                                }
+                                if (markers && markers[data.new_id]) {
+                                    setTimeout(() => {
+                                        markers[data.new_id].openPopup();
+                                    }, 800);
+                                }
+                            }
+                        });
+                    } else {
+                        showToast(data.message || 'Lỗi lưu kỷ niệm', 'error');
+                        if (btn) {
+                            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Đăng Kỷ Niệm';
+                            btn.disabled = false;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+                    if (btn) {
+                        btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Đăng Kỷ Niệm';
+                        btn.disabled = false;
+                    }
+                });
             });
         }
 
-        // Prevent double submit on edit memory form
+        // Edit memory with AJAX
         const editMemForm = document.getElementById('editMemoryForm');
         if (editMemForm) {
             editMemForm.addEventListener('submit', function(e) {
+                e.preventDefault();
                 const btn = this.querySelector('button[type="submit"]');
                 if (btn) {
-                    if (btn.disabled) {
-                        e.preventDefault();
-                        return;
-                    }
+                    if (btn.disabled) return;
                     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang cập nhật...';
                     btn.disabled = true;
                 }
+
+                const formData = new FormData(this);
+                formData.append('ajax', '1');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.reset();
+                        const modalEl = document.getElementById('editMemoryModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        
+                        showToast('Cập nhật kỷ niệm thành công!');
+                        refreshDashboardState();
+                    } else {
+                        showToast(data.message || 'Lỗi cập nhật', 'error');
+                        if (btn) {
+                            btn.innerHTML = 'Lưu Thay Đổi';
+                            btn.disabled = false;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+                    if (btn) {
+                        btn.innerHTML = 'Lưu Thay Đổi';
+                        btn.disabled = false;
+                    }
+                });
             });
         }
 
-        // Prevent double submit on create trip form
+        // Create new trip with AJAX
         const createTripForm = document.getElementById('createTripForm');
         if (createTripForm) {
             createTripForm.addEventListener('submit', function(e) {
+                e.preventDefault();
                 const btn = this.querySelector('button[type="submit"]');
                 if (btn) {
-                    if (btn.disabled) {
-                        e.preventDefault();
-                        return;
-                    }
+                    if (btn.disabled) return;
                     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang tạo...';
                     btn.disabled = true;
                 }
+
+                const formData = new FormData(this);
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.reset();
+                        const modalEl = document.getElementById('createTripModal');
+                        if (modalEl) {
+                            const modal = bootstrap.Modal.getInstance(modalEl);
+                            if (modal) modal.hide();
+                        }
+                        
+                        showToast('Tạo chuyến đi thành công!');
+                        refreshDashboardState();
+                    } else {
+                        showToast(data.message || 'Lỗi tạo chuyến đi', 'error');
+                        if (btn) {
+                            btn.innerHTML = 'Tạo Hành Trình';
+                            btn.disabled = false;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Có lỗi xảy ra.', 'error');
+                    if (btn) {
+                        btn.innerHTML = 'Tạo Hành Trình';
+                        btn.disabled = false;
+                    }
+                });
             });
         }
+
+        // Event delegation for deleting memories via AJAX
+        document.body.addEventListener('click', function(e) {
+            const deleteLink = e.target.closest('a[href*="url=location/delete"]');
+            if (deleteLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (confirm('Xóa kỷ niệm này?')) {
+                    const url = deleteLink.href + '&ajax=1';
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Đã xóa kỷ niệm!');
+                                refreshDashboardState();
+                            } else {
+                                showToast(data.message || 'Lỗi xóa kỷ niệm', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            showToast('Lỗi kết nối khi xóa', 'error');
+                        });
+                }
+            }
+        });
         
         // Lấy thông tin check-in mới từ URL params (Ưu tiên)
         const urlParams = new URLSearchParams(window.location.search);
