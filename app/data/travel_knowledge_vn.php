@@ -76,14 +76,14 @@ return [
             'Phố Cổ – Hồ Hoàn Kiếm',
             'Văn Miếu – Quốc Tử Giám',
             'Hồ Tây (hoàng hôn, cafe)',
-            'Lăng Bác / Quảng trường Ba Đình',
+            'Lăng Ba Đình / Quảng trường Ba Đình',
             'Phố đi bộ cuối tuần',
         ],
         'food' => [
-            'Phở, bún chả, bánh cuốn',
-            'Cà phê trứng, cốm',
+            'Phở bò, phở gà, bún chả',
+            'Cà phê trứng, cốm Hà Nội',
             'Bún đậu mắm tôm',
-            'Chè, bánh ngọt phố cổ',
+            'Chè cổ truyền phố cổ',
         ],
         'photo' => 'Sáng sớm phố cổ; tối ánh đèn vàng.',
     ],
@@ -143,5 +143,135 @@ return [
         'spots' => ['Bãi Sao', 'Hoàng hôn Dinh Cậu', 'Grand World / Sunset Sanato', 'Chợ đêm Dương Đông', 'Ngọc Trai / làng chài'],
         'food' => ['Hải sản', 'Ken noodles', 'Nước mắm', 'Sim wine'],
         'photo' => '17h–18h30 hoàng hôn là vàng.',
+    ],
+    'ha giang' => [
+        'name' => 'Hà Giang',
+        'lat' => 22.8233,
+        'lon' => 104.9833,
+        'vibe' => 'chinh phục đèo dốc, núi non hùng vĩ, ruộng bậc thang, bản làng dân tộc',
+        'intro' => 'Hà Giang nổi tiếng với cung đường phượt Quản Bạ - Yên Minh - Đồng Văn - Mèo Vạc hùng vĩ. Lịch trình 3 ngày 2 đêm hoặc 4 ngày 3 đêm là lý tưởng nhất.',
+        'spots' => [
+            'Cột mốc số 0 (Trung tâm TP. Hà Giang)',
+            'Dốc Bắc Sum / Cổng trời Quản Bạ',
+            'Dốc Thẩm Mã (con đèo uốn lượn chín khoanh dốc)',
+            'Phố cổ Đồng Văn (chợ phiên cuối tuần náo nhiệt)',
+            'Cột cờ Lũng Cú (Cực Bắc địa đầu Tổ quốc)',
+            'Dinh thự họ Vương (Dinh Vua Mèo cổ kính)',
+            'Đèo Mã Pí Lèng (một trong tứ đại đỉnh đèo Việt Nam)',
+            'Sông Nho Quế / Hẻm Tu Sản (đi thuyền dưới vực sâu)'
+        ],
+        'food' => [
+            'Bánh cuốn Đồng Văn (ăn kèm nước dùng xương ấm nóng)',
+            'Cháo ấu tẩu (đặc sản giải cảm ăn đêm)',
+            'Thắng cố & mèn mén tại chợ phiên vùng cao',
+            'Thịt trâu gác bếp, lạp sườn hun khói',
+            'Phở tráng tay Đồng Văn'
+        ],
+        'photo' => 'Săn mây đỉnh Mã Pí Lèng 6:00-7:00 sáng; hoàng hôn Lũng Cú hoặc cổng trời Quản Bạ 17:00-18:00.',
+    ],
+    'sapa' => [
+        'name' => 'Sapa',
+        'lat' => 22.3364,
+        'lon' => 103.8438,
+        'vibe' => 'sương mù, đỉnh Fansipan, ruộng bậc thang, bản làng mộc mạc',
+        'intro' => 'Sapa ngập trong sương mờ với đỉnh Fansipan hùng vĩ và các bản làng Cát Cát, Tả Van mộc mạc. Thích hợp đi 2-3 ngày nghỉ dưỡng hoặc trekking.',
+        'spots' => [
+            'Đỉnh Fansipan (đi cáp treo ngắm biển mây và đỉnh thiêng)',
+            'Bản Cát Cát (bản làng người Hmong gỗ mộc bên thác nước)',
+            'Nhà thờ Đá Sapa (trung tâm thị trấn)',
+            'Bản Tả Van / Lao Chải (trekking ngắm ruộng bậc thang)',
+            'Cổng trời Ô Quy Hồ (đèo Ô Quy Hồ săn hoàng hôn)'
+        ],
+        'food' => [
+            'Lẩu cá hồi / cá tầm Sapa tươi ngon',
+            'Đồ nướng sưởi ấm đêm lạnh thị trấn',
+            'Thịt lợn cắp nách nướng ống tre',
+            'Thắng cố ngựa bản địa'
+        ],
+        'photo' => '17:00 hoàng hôn đỉnh Ô Quy Hồ; 7:30 sáng đi cáp treo Fansipan săn mây.',
+    ],
+    'ninh binh' => [
+        'name' => 'Ninh Bình',
+        'lat' => 20.2506,
+        'lon' => 105.9744,
+        'vibe' => 'non nước Tràng An, hang động, chùa cổ kính',
+        'intro' => 'Ninh Bình sở hữu di sản kép Tràng An sơn thủy hữu tình, hang Múa view toàn cảnh và các ngôi chùa cổ kính. Rất hợp đi 1-2 ngày.',
+        'spots' => [
+            'Khu du lịch Tràng An / Tam Cốc (đi thuyền nan xuyên hang)',
+            'Hang Múa (leo 486 bậc đá ngắm toàn cảnh sông Ngô Đồng)',
+            'Chùa Bái Đính (ngôi chùa quy mô lớn kỷ lục)',
+            'Cố đô Hoa Lư (đền thờ vua Đinh, vua Lê)',
+            'Đầm Vân Long (ngắm voọc quần đùi trắng và cò bay)'
+        ],
+        'food' => [
+            'Cơm cháy ruốc Ninh Bình siêu giòn',
+            'Thịt dê núi Ninh Bình (tái dê, dê nướng sả)',
+            'Ốc núi luộc gừng sả',
+            'Rượu Kim Sơn'
+        ],
+        'photo' => 'Chiều muộn trên đỉnh Hang Múa; đi thuyền Tràng An lúc 15:00 để nắng xiên dịu đẹp.',
+    ],
+    'ha long' => [
+        'name' => 'Hạ Long',
+        'lat' => 20.9509,
+        'lon' => 107.0733,
+        'vibe' => 'kỳ quan vịnh biển, du thuyền, hang động tự nhiên',
+        'intro' => 'Hạ Long nổi tiếng với hàng ngàn đảo đá vôi nhô lên từ vịnh xanh ngọc. Hãy trải nghiệm ngủ đêm trên du thuyền hoặc vui chơi tại Sun World.',
+        'spots' => [
+            'Vịnh Hạ Long (ngắm Hòn Trống Mái, Động Thiên Cung, Hang Sửng Sốt)',
+            'Đảo Ti Tốp (leo đỉnh ngắm vịnh hoặc tắm biển cát trắng)',
+            'Công viên Sun World Hạ Long',
+            'Bảo tàng Quảng Ninh (thiết kế kính đen độc đáo bên vịnh)',
+            'Núi Bài Thơ (ngắm trọn vẹn vịnh từ trên cao)'
+        ],
+        'food' => [
+            'Chả mực giã tay ăn kèm xôi nóng / bánh cuốn',
+            'Bánh gật gù Quảng Ninh',
+            'Sá sùng Quảng Ninh xào hoặc nấu cháo',
+            'Hải sản tươi sống (bề bề, ghẹ, ốc móng tay)'
+        ],
+        'photo' => 'Hoàng hôn trên vịnh từ boong tàu du lịch; check-in Bảo tàng Quảng Ninh lúc 15:00-16:00.',
+    ],
+    'hoi an' => [
+        'name' => 'Hội An',
+        'lat' => 15.8801,
+        'lon' => 108.338,
+        'vibe' => 'phố cổ đèn lồng, sông Hoài hoài cổ, bình yên',
+        'intro' => 'Hội An giữ nguyên nét rêu phong của thương cảng cổ thế kỷ 17. Hãy đi bộ dạo phố cổ và đi thuyền thả hoa đăng trên sông Hoài.',
+        'spots' => [
+            'Chùa Cầu Nhật Bản (biểu tượng phố cổ)',
+            'Hội quán Phúc Kiến / Quảng Đông cổ kính',
+            'Sông Hoài (đi thuyền thả hoa đăng tối lung linh)',
+            'Rừng dừa Bảy Mẫu (trải nghiệm đi thuyền thúng)',
+            'Bãi biển An Bàng (bãi cát hoang sơ, yên bình)'
+        ],
+        'food' => [
+            'Cao lầu Hội An chính gốc',
+            'Bánh mì Phượng / Madam Khánh nức tiếng',
+            'Cơm gà Hội An (gà xé phay thơm ngọt)',
+            'Nước Mót (thảo mộc sả chanh thanh lọc)'
+        ],
+        'photo' => '6:00-7:00 sáng phố cổ vắng người hoài cổ; 18:30 lúc phố cổ lên đèn lồng.',
+    ],
+    'hue' => [
+        'name' => 'Huế',
+        'lat' => 16.4637,
+        'lon' => 107.5909,
+        'vibe' => 'lăng tẩm cổ kính, sông Hương thơ mộng, ẩm thực phong phú',
+        'intro' => 'Huế mang vẻ trầm mặc, thơ mộng của cố đô. Lịch trình 2N1Đ hoặc 3N2Đ là đủ để khám phá Đại Nội, lăng tẩm và ăn sập các món Huế.',
+        'spots' => [
+            'Đại Nội Huế (Kinh Thành hoàng cung cổ kính)',
+            'Chùa Thiên Mụ (ngôi chùa cổ bên bờ sông Hương)',
+            'Lăng Khải Định / Lăng Minh Mạng / Lăng Tự Đức cổ kính',
+            'Chợ Đông Ba (khám phá ẩm thực và đời sống Huế)',
+            'Cầu Trường Tiền (tối lên đèn màu lấp lánh)'
+        ],
+        'food' => [
+            'Bún bò Huế nguyên bản ngon đậm đà',
+            'Cơm hến / Bún hến sông Hương',
+            'Các loại bánh Huế: bánh bèo, nậm, lọc, ram ít',
+            'Chè hẻm Huế (thưởng thức hơn 20 loại chè ngọt ngào)'
+        ],
+        'photo' => 'Chụp ảnh cổ phục tại Đại Nội hoặc Lăng Khải Định; hoàng hôn sông Hương từ phía chùa Thiên Mụ.',
     ],
 ];
