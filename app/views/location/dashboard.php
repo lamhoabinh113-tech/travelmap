@@ -2285,16 +2285,99 @@
     window.triggerLocationGrant = triggerLocationGrant;
     window.hideLocationModals = hideLocationModals;
 
+    function initializeDefaultMarker() {
+        if (!currentLocationMarker) {
+            // Khởi tạo vị trí mặc định tại trung tâm bản đồ hiện tại (mặc định TP.HCM hoặc Hà Nội)
+            const mapCenter = map.getCenter();
+            const timeStr = new Date().toLocaleTimeString('vi-VN');
+            const dragPopupHtml = `<strong>Vị trí mặc định (Ghim tay)</strong><br>
+                <small>${mapCenter.lat.toFixed(6)}, ${mapCenter.lng.toFixed(6)}</small><br>
+                <span class="badge bg-warning mt-1 text-dark">Kéo thả marker để sửa vị trí</span>`;
+            
+            currentLocationMarker = L.marker(mapCenter, { 
+                icon: liveLocationIcon, 
+                zIndexOffset: 2000,
+                draggable: true 
+            }).addTo(map).bindPopup(dragPopupHtml);
+
+            currentLocationMarker.on('dragend', function(e) {
+                const newPos = e.target.getLatLng();
+                userManuallySetLocation = true;
+                followLiveLocation = false;
+                
+                const btn = document.getElementById('followLocationBtn');
+                if (btn) btn.classList.remove('active');
+                
+                const latEl = document.getElementById('lat');
+                const lngEl = document.getElementById('lng');
+                if (latEl) latEl.value = newPos.lat;
+                if (lngEl) lngEl.value = newPos.lng;
+                
+                locketLat = newPos.lat;
+                locketLng = newPos.lng;
+
+                const timeStr = new Date().toLocaleTimeString('vi-VN');
+                const dragPopupHtml = `<strong>Vị trí đã ghim tay</strong><br>
+                    <small>${newPos.lat.toFixed(6)}, ${newPos.lng.toFixed(6)}</small><br>
+                    <small>${timeStr}</small>`;
+                
+                currentLocationMarker.setPopupContent(dragPopupHtml).openPopup();
+                if (currentLocationCircle) {
+                    currentLocationCircle.setLatLng(newPos);
+                    currentLocationCircle.setRadius(8);
+                }
+                
+                updateLocationStatus(
+                    '<i class="bi bi-pin-map-fill me-2"></i> <small>Đã ghim vị trí thủ công</small>',
+                    'success'
+                );
+                
+                const hudText = document.getElementById('liveLocationHudText');
+                if (hudText) {
+                    hudText.innerHTML = `<span class="accuracy-good">Ghim thủ công</span><br>${newPos.lat.toFixed(6)}, ${newPos.lng.toFixed(6)}`;
+                }
+            });
+
+            currentLocationCircle = L.circle(mapCenter, {
+                radius: 10,
+                color: '#22d3ee',
+                fillColor: '#22d3ee',
+                fillOpacity: 0.12,
+                weight: 1,
+                interactive: false
+            }).addTo(map);
+
+            // Gán giá trị mặc định cho form luôn để tránh bị trống
+            const latEl = document.getElementById('lat');
+            const lngEl = document.getElementById('lng');
+            if (latEl) latEl.value = mapCenter.lat;
+            if (lngEl) lngEl.value = mapCenter.lng;
+            locketLat = mapCenter.lat;
+            locketLng = mapCenter.lng;
+        }
+    }
+
     function checkAndRequestLocationPermission() {
         if (!navigator.geolocation) {
-            showLocationNoticeModal("Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS.", "danger");
+            showLocationNoticeModal("Thiết bị hoặc trình duyệt của bạn không hỗ trợ định vị GPS tự động. Bạn vẫn có thể click lên bản đồ hoặc kéo thả marker để chọn vị trí.", "warning");
+            initializeDefaultMarker();
             return;
         }
 
         // Kiểm tra xem có đang ở môi trường bảo mật không (HTTPS hoặc localhost)
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            const httpsUrl = 'https://' + window.location.host + window.location.pathname + window.location.search;
-            showLocationNoticeModal(`Để truy cập vị trí, hệ thống yêu cầu kết nối bảo mật HTTPS.<br><br><a href="${httpsUrl}" class="btn btn-warning rounded-pill px-4 fw-bold text-dark w-100 mt-2">Chuyển sang HTTPS</a>`, "danger");
+            showLocationNoticeModal(`
+                <h6 class="fw-bold text-dark mb-3">Chế độ Ghim Vị Trí Thủ Công</h6>
+                Do thiết bị kết nối qua mạng nội bộ HTTP (không có bảo mật HTTPS), trình duyệt điện thoại sẽ chặn tính năng tự động lấy GPS.<br><br>
+                <div class="alert alert-info py-2 small border-0 text-start">
+                    💡 <strong>Cách dùng:</strong> Nhấn nút bên dưới để đóng bảng này. Sau đó bạn có thể <strong>kéo thả chấm tròn xanh</strong> hoặc <strong>click trực tiếp lên bản đồ</strong> để chọn vị trí của mình!
+                </div>
+                <button type="button" class="btn btn-primary rounded-pill w-100 py-2.5 fw-bold" onclick="hideLocationModals()">
+                    Đã hiểu, tôi sẽ ghim tay
+                </button>
+            `, "warning");
+            
+            initializeDefaultMarker();
             return;
         }
 
@@ -2304,6 +2387,7 @@
                     showLocationPromptModal();
                 } else if (result.state === 'denied') {
                     showLocationNoticeModal("Truy cập vị trí bị chặn! Vui lòng chạm vào biểu tượng ổ khóa 🔒 trên thanh địa chỉ trình duyệt, sau đó chọn Cho phép (Allow) quyền Vị trí.", "warning");
+                    initializeDefaultMarker();
                 } else {
                     startLiveLocationTracking();
                 }
@@ -2314,6 +2398,7 @@
                         startLiveLocationTracking();
                     } else if (result.state === 'denied') {
                         showLocationNoticeModal("Truy cập vị trí bị chặn! Vui lòng chạm vào biểu tượng ổ khóa 🔒 trên thanh địa chỉ trình duyệt, sau đó chọn Cho phép (Allow) quyền Vị trí.", "warning");
+                        initializeDefaultMarker();
                     }
                 };
             }).catch(function(err) {

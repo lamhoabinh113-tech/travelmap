@@ -17,7 +17,11 @@ if (is_readable($privateConfig)) {
 if (!getenv('GEMINI_API_KEY')) {
     putenv('GEMINI_API_KEY=');
 }
+if (!getenv('GROQ_API_KEY')) {
+    putenv('GROQ_API_KEY=');
+}
 
 // Hoặc nếu bạn muốn dùng OpenAI:
 // putenv('OPENAI_API_KEY=');
 // putenv('OPENAI_MODEL=gpt-4o-mini');
+?>

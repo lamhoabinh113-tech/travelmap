@@ -274,4 +274,26 @@ return [
         ],
         'photo' => 'Chụp ảnh cổ phục tại Đại Nội hoặc Lăng Khải Định; hoàng hôn sông Hương từ phía chùa Thiên Mụ.',
     ],
+    'tam dao' => [
+        'name' => 'Tam Đảo',
+        'lat' => 21.4589,
+        'lon' => 105.6456,
+        'vibe' => 'sương mù, núi non, lâu đài cổ kính, không khí mát lạnh',
+        'intro' => 'Tam Đảo được ví như Đà Lạt của miền Bắc, khí hậu mát mẻ quanh năm. Cực kỳ lý tưởng cho chuyến đi trốn ngắn ngày 2 ngày 1 đêm hoặc cuối tuần.',
+        'spots' => [
+            'Nhà thờ đá cổ Tam Đảo (biểu tượng kiến trúc Pháp cổ kính)',
+            'Cổng Trời Tam Đảo (nơi ôm trọn toàn cảnh núi rừng mây phủ)',
+            'Cầu Mây Tam Đảo (góc check-in sống ảo ngắm thung lũng thông)',
+            'Quảng trường trung tâm & Chợ đêm Tam Đảo',
+            'Thác Bạc (thác nước giấu mình trong rừng mát lạnh)',
+            'Quán Cafe Gió (quán cafe view núi rừng thung lũng cực chill)'
+        ],
+        'food' => [
+            'Đặc sản rau su su Tam Đảo (ngọn su su xào tỏi giòn ngọt)',
+            'Thịt xiên nướng than hoa nóng hổi ở chợ đêm',
+            'Gà đồi đắp đất nướng hoặc hấp lá chanh',
+            'Lợn mán nướng ống tre bản địa'
+        ],
+        'photo' => 'Săn mây lúc 6:00 - 7:30 sáng tại Cổng Trời hoặc Cầu Mây; đón hoàng hôn núi rừng lúc 17:30 tại góc ngoài trời của Cafe Gió.'
+    ],
 ];

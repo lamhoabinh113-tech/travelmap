@@ -80,13 +80,23 @@ class AiController {
 
         try {
             $geminiKey = getenv('GEMINI_API_KEY');
-            if ($geminiKey && strlen(trim($geminiKey)) > 10) {
+            if ($geminiKey && strlen(trim($geminiKey)) > 10 && strpos($geminiKey, 'AQ.') === false) {
                 $remoteAnswer = $this->geminiChat($question, $latitude, $longitude, $context, $geminiKey);
                 if (!$this->isWeakAiReply($remoteAnswer)) {
                     return $remoteAnswer;
                 }
             }
         } catch (Exception $e) { /* Gemini unavailable, continue */ }
+
+        try {
+            $groqKey = getenv('GROQ_API_KEY');
+            if ($groqKey && strlen(trim($groqKey)) > 10) {
+                $remoteAnswer = $this->groqChat($question, $latitude, $longitude, $context, $groqKey);
+                if (!$this->isWeakAiReply($remoteAnswer)) {
+                    return $remoteAnswer;
+                }
+            }
+        } catch (Exception $e) { /* Groq unavailable, continue */ }
 
         try {
             $openaiKey = getenv('OPENAI_API_KEY');
@@ -216,6 +226,35 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
         }
 
         return $this->fallbackTravelMemoryResponse($question, $latitude, $longitude, $context);
+    }
+
+    private function groqChat($question, $latitude, $longitude, $context, $apiKey) {
+        $payload = [
+            'model' => 'llama-3.3-70b-versatile',
+            'messages' => [
+                ['role' => 'system', 'content' => $this->getSystemPrompt($context)],
+                ['role' => 'user', 'content' => $this->buildPrompt($question, $latitude, $longitude, $context)]
+            ],
+            'max_tokens' => 1400,
+            'temperature' => 0.72
+        ];
+
+        $response = $this->httpPost(
+            'https://api.groq.com/openapi/v1/chat/completions',
+            json_encode($payload, JSON_UNESCAPED_UNICODE),
+            [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $apiKey
+            ]
+        );
+
+        if (!$response) return null;
+
+        $data = json_decode($response, true);
+        if (isset($data['choices'][0]['message']['content'])) {
+            return trim($data['choices'][0]['message']['content']);
+        }
+        return null;
     }
 
     private function fallbackTravelMemoryResponse($question, $latitude, $longitude, $context) {
@@ -1186,6 +1225,7 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
             'ha long' => 'Hạ Long', 'vung tau' => 'Vũng Tàu', 'hue' => 'Huế', 'hoi an' => 'Hội An',
             'can tho' => 'Cần Thơ', 'sapa' => 'Sa Pa', 'ninh binh' => 'Ninh Bình', 'quy nhon' => 'Quy Nhơn',
             'ho tay' => 'Hồ Tây', 'ha giang' => 'Hà Giang', 'bien hoa' => 'Biên Hòa',
+            'tam dao' => 'Tam Đảo', 'tam đảo' => 'Tam Đảo',
         ];
         foreach ($known as $key => $label) {
             if (strpos($q, $key) !== false) {
@@ -1201,9 +1241,9 @@ CÁCH TRÌNH BÀY & TONE GIỌNG:
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, $question, $matches)) {
                 $place = trim($matches[1]);
-                $place = preg_replace('/\s+(có|co|với|voi|cho|trong|và|va|nên|nen|được|duoc).*$/iu', '', $place);
+                $place = preg_replace('/\s+(có|co|với|voi|cho|trong|và|va|nên|nen|được|duoc|thì|thi|sao|thế|the|nào|nao|gì|gi|đâu|dau|như|nhu).*$/iu', '', $place);
                 if ($this->textLength($place) >= 2 && $this->textLength($place) <= 40) {
-                    return ucwords($place);
+                    return ucwords(trim($place));
                 }
             }
         }
