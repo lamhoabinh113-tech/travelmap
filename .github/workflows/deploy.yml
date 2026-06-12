@@ -7,7 +7,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🎉 Deploy to Host
+    name: 🚀 Deploy to Host
     runs-on: ubuntu-latest
     steps:
     - name: 🚚 Get latest code
@@ -24,6 +24,8 @@ jobs:
         exclude: |
           **/.git*
           **/.git*/**
+          **/.vscode/**
+          **/.docx_temp/**
           **/node_modules/**
           watch.ps1
           travel_memory_map_local.sql
@@ -32,3 +34,20 @@ jobs:
           app/controllers/dashboard_debug.txt
           app/controllers/login_debug.txt
           config/db_config.php
+          config/ai_private.php
+          *.docx
+          *.py
+          *.ps1
+          huong_dan_thuyet_trinh.md
+          generate_docx.py
+          generate_pptx.py
+          generate_pptx_premium.py
+          edit_report.ps1
+          edit_report.py
+          edit_report_v2.ps1
+          inspect_docx.ps1
+          inspect_docx.py
+          inspect_section_details.ps1
+          update_active_toc.ps1
+          update_toc.ps1
+          write_utf8_bom.py
