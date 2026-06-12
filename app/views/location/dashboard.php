@@ -1965,11 +1965,17 @@
     let _lastRawLat = null, _lastRawLng = null;
     let _accuracyRetryTimer = null;
 
-    // Options chính: yêu cầu độ chính xác cao nhất tuyệt đối
+    // Options chính: yêu cầu độ chính xác cao
     const geoOptions = {
         enableHighAccuracy: true,
-        maximumAge: 0,       // KHÔNG BAO GIỜ dùng vị trí cache
-        timeout: 25000       // Chờ tối đa 25s để lấy GPS xịn nhất
+        maximumAge: 3000,    // Cho phép cache tối đa 3 giây để phản hồi nhanh hơn
+        timeout: 20000       // Chờ tối đa 20s để lấy GPS xịn nhất
+    };
+    // Options nhanh: dùng network/wifi location trước để phản hồi tức thì
+    const geoOptionsFast = {
+        enableHighAccuracy: false,
+        maximumAge: 10000,   // Cho phép cache 10 giây
+        timeout: 8000        // Timeout nhanh 8s
     };
 
     const liveLocationIcon = L.divIcon({
@@ -2156,9 +2162,23 @@
         const hudText = document.getElementById('liveLocationHudText');
         if (hudText) hudText.textContent = 'Đang định vị lại...';
 
+        // Bước 1: Lấy vị trí nhanh bằng network/wifi (phản hồi <3s)
         navigator.geolocation.getCurrentPosition(
             updateCurrentPosition,
-            onLocationError,
+            function(fastErr) {
+                // Nếu lấy nhanh thất bại, thử lại với high accuracy
+                navigator.geolocation.getCurrentPosition(
+                    updateCurrentPosition,
+                    onLocationError,
+                    geoOptions
+                );
+            },
+            geoOptionsFast
+        );
+        // Bước 2: Đồng thời lấy vị trí chính xác cao hơn (GPS hardware)
+        navigator.geolocation.getCurrentPosition(
+            updateCurrentPosition,
+            function() {},  // Bỏ qua lỗi ở bước 2 vì bước 1 đã xử lý
             geoOptions
         );
     }
@@ -2168,13 +2188,43 @@
             updateLocationStatus('<i class="bi bi-exclamation-triangle-fill me-2"></i> <small>Trình duyệt không hỗ trợ định vị</small>', 'warning');
             return;
         }
-        if (locationWatchId !== null) return;
 
-        document.getElementById('liveLocationHud').style.display = 'block';
-        document.getElementById('liveLocationHudText').textContent = 'Đang lấy GPS chính xác...';
+        // Reset nếu đang có watch cũ để tránh bị return sớm
+        if (locationWatchId !== null) {
+            navigator.geolocation.clearWatch(locationWatchId);
+            locationWatchId = null;
+        }
+        if (_accuracyRetryTimer !== null) {
+            clearInterval(_accuracyRetryTimer);
+            _accuracyRetryTimer = null;
+        }
 
-        // Lấy vị trí bằng getCurrentPosition trước để phản hồi nhanh
-        requestAccurateLocation();
+        const hudEl = document.getElementById('liveLocationHud');
+        const hudText = document.getElementById('liveLocationHudText');
+        if (hudEl) hudEl.style.display = 'block';
+        if (hudText) hudText.textContent = 'Đang lấy vị trí...';
+
+        // Bước 1: Lấy vị trí nhanh ngay lập tức (network/wifi, không cần GPS hardware)
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                updateCurrentPosition(pos);
+                // Sau khi có vị trí nhanh, tiếp tục lấy GPS chính xác
+                navigator.geolocation.getCurrentPosition(
+                    updateCurrentPosition,
+                    function() {},  // Im lặng nếu GPS cao thất bại
+                    geoOptions
+                );
+            },
+            function(fastErr) {
+                // Nếu lấy nhanh thất bại, thử ngay với high accuracy
+                navigator.geolocation.getCurrentPosition(
+                    updateCurrentPosition,
+                    onLocationError,
+                    geoOptions
+                );
+            },
+            geoOptionsFast  // <-- Nhanh: không cần GPS hardware
+        );
 
         // watchPosition để liên tục cập nhật theo thời gian thực
         locationWatchId = navigator.geolocation.watchPosition(
@@ -2183,13 +2233,13 @@
             geoOptions
         );
 
-        // Retry nếu chưa lấy được GPS xịn sau 20 giây
+        // Retry nếu chưa lấy được GPS xịn sau 25 giây
         _accuracyRetryTimer = setInterval(() => {
             if (!userManuallySetLocation && bestAccuracy > 100) {
                 console.log('Đang thử nâng cao độ chính xác GPS...');
                 requestAccurateLocation();
             }
-        }, 20000);
+        }, 25000);
     }
 
     function stopLiveLocationTracking() {
@@ -2279,6 +2329,12 @@
 
     function triggerLocationGrant() {
         hideLocationModals();
+        // Reset trạng thái để đảm bảo tracking bắt đầu lại từ đầu
+        bestAccuracy = Infinity;
+        locationFixCount = 0;
+        lastFlyLatLng = null;
+        userManuallySetLocation = false;
+        followLiveLocation = true;
         startLiveLocationTracking();
     }
 
