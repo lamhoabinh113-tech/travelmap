@@ -171,10 +171,24 @@ class FeedController {
             sender_id INT NOT NULL,
             receiver_id INT NOT NULL,
             message TEXT NOT NULL,
+            attachment VARCHAR(255) DEFAULT NULL,
+            reaction VARCHAR(50) DEFAULT NULL,
+            reply_to_image_id INT DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_private_pair (sender_id, receiver_id, created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         $this->db->exec($query);
+
+        // Auto-migrate existing table
+        try {
+            $this->db->exec("ALTER TABLE private_messages ADD COLUMN attachment VARCHAR(255) DEFAULT NULL AFTER message");
+        } catch(PDOException $e) {}
+        try {
+            $this->db->exec("ALTER TABLE private_messages ADD COLUMN reaction VARCHAR(50) DEFAULT NULL AFTER attachment");
+        } catch(PDOException $e) {}
+        try {
+            $this->db->exec("ALTER TABLE private_messages ADD COLUMN reply_to_image_id INT DEFAULT NULL AFTER reaction");
+        } catch(PDOException $e) {}
     }
 
     private function areFriends($user_id, $friend_id) {
@@ -202,9 +216,24 @@ class FeedController {
         $sender_id = $_SESSION['user_id'];
         $receiver_id = isset($_POST['receiver_id']) ? intval($_POST['receiver_id']) : 0;
         $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+        $reply_to_image_id = isset($_POST['reply_to_image_id']) && intval($_POST['reply_to_image_id']) > 0 ? intval($_POST['reply_to_image_id']) : null;
 
-        if ($receiver_id <= 0 || $message === '') {
-            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập tin nhắn']);
+        $attachment_path = null;
+        if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+            $upload_dir = '../public/uploads/chat/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+            $ext = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            if (in_array($ext, $allowed)) {
+                $filename = 'chat_' . time() . '_' . uniqid() . '.' . $ext;
+                if (move_uploaded_file($_FILES['attachment']['tmp_name'], $upload_dir . $filename)) {
+                    $attachment_path = 'chat/' . $filename;
+                }
+            }
+        }
+
+        if ($receiver_id <= 0 || ($message === '' && !$attachment_path && !$reply_to_image_id)) {
+            echo json_encode(['success' => false, 'message' => 'Vui lòng nhập tin nhắn hoặc gửi ảnh']);
             exit();
         }
 
@@ -221,13 +250,15 @@ class FeedController {
 
         $this->ensurePrivateMessagesTable();
 
-        $query = "INSERT INTO private_messages (sender_id, receiver_id, message, created_at)
-                  VALUES (:sender_id, :receiver_id, :message, NOW())";
+        $query = "INSERT INTO private_messages (sender_id, receiver_id, message, attachment, reply_to_image_id, created_at)
+                  VALUES (:sender_id, :receiver_id, :message, :attachment, :reply_to_image_id, NOW())";
         $stmt = $this->db->prepare($query);
         $ok = $stmt->execute([
             ':sender_id' => $sender_id,
             ':receiver_id' => $receiver_id,
-            ':message' => $message
+            ':message' => $message,
+            ':attachment' => $attachment_path,
+            ':reply_to_image_id' => $reply_to_image_id
         ]);
 
         echo json_encode([
@@ -250,19 +281,130 @@ class FeedController {
 
         $this->ensurePrivateMessagesTable();
 
-        $query = "SELECT pm.id, pm.sender_id, pm.receiver_id, pm.message, pm.created_at,
-                         u.full_name, u.username, u.avatar
+        $query = "SELECT pm.id, pm.sender_id, pm.receiver_id, pm.message, pm.attachment, pm.reaction, pm.reply_to_image_id, pm.created_at,
+                         u.full_name, u.username, u.avatar,
+                         li.image_path as replied_image_path
                   FROM private_messages pm
                   JOIN users u ON pm.sender_id = u.id
+                  LEFT JOIN location_images li ON pm.reply_to_image_id = li.id
                   WHERE (pm.sender_id = :user_id AND pm.receiver_id = :friend_id)
                      OR (pm.sender_id = :friend_id AND pm.receiver_id = :user_id)
                   ORDER BY pm.created_at DESC
-                  LIMIT 8";
+                  LIMIT 50";
         $stmt = $this->db->prepare($query);
         $stmt->execute([':user_id' => $user_id, ':friend_id' => $friend_id]);
         $messages = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
 
         echo json_encode(['success' => true, 'messages' => $messages]);
+        exit();
+    }
+
+    public function reactToMessage() {
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid method']);
+            exit();
+        }
+        $user_id = $_SESSION['user_id'];
+        $message_id = isset($_POST['message_id']) ? intval($_POST['message_id']) : 0;
+        $reaction = isset($_POST['reaction']) ? trim($_POST['reaction']) : '';
+
+        // Kiểm tra xem tin nhắn có thuộc về cuộc trò chuyện của mình không
+        $check = "SELECT id FROM private_messages WHERE id = :mid AND (sender_id = :uid OR receiver_id = :uid)";
+        $stmt = $this->db->prepare($check);
+        $stmt->execute([':mid' => $message_id, ':uid' => $user_id]);
+        if ($stmt->rowCount() == 0) {
+            echo json_encode(['success' => false, 'message' => 'Không tìm thấy tin nhắn']);
+            exit();
+        }
+
+        $query = "UPDATE private_messages SET reaction = :reaction WHERE id = :mid";
+        $stmt = $this->db->prepare($query);
+        $ok = $stmt->execute([':reaction' => $reaction === '' ? null : $reaction, ':mid' => $message_id]);
+        
+        echo json_encode(['success' => $ok]);
+        exit();
+    }
+
+    public function getFriendsList() {
+        header('Content-Type: application/json; charset=utf-8');
+        $user_id = $_SESSION['user_id'];
+        $query = "SELECT u.id, u.full_name, u.username, u.avatar 
+                  FROM friendships f
+                  JOIN users u ON (f.user_id = u.id OR f.friend_id = u.id)
+                  WHERE (f.user_id = :uid OR f.friend_id = :uid) 
+                    AND u.id != :uid 
+                    AND f.status = 'accepted'";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':uid' => $user_id]);
+        $friends = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'friends' => $friends]);
+        exit();
+    }
+
+    // --- Image Comments API ---
+    public function getImageComments() {
+        header('Content-Type: application/json; charset=utf-8');
+        $image_id = isset($_GET['image_id']) ? intval($_GET['image_id']) : 0;
+        if ($image_id <= 0) {
+            echo json_encode(['success' => false, 'comments' => []]);
+            exit();
+        }
+
+        $query = "SELECT im.id, im.message, im.created_at, u.full_name, u.username, u.avatar 
+                  FROM image_messages im
+                  JOIN users u ON im.sender_id = u.id
+                  WHERE im.image_id = :image_id
+                  ORDER BY im.created_at ASC";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':image_id' => $image_id]);
+        $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'comments' => $comments]);
+        exit();
+    }
+
+    public function postImageComment() {
+        header('Content-Type: application/json; charset=utf-8');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid method']);
+            exit();
+        }
+
+        $user_id = $_SESSION['user_id'];
+        $image_id = isset($_POST['image_id']) ? intval($_POST['image_id']) : 0;
+        $message = isset($_POST['message']) ? trim($_POST['message']) : '';
+
+        if ($image_id <= 0 || $message === '') {
+            echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
+            exit();
+        }
+
+        $query = "INSERT INTO image_messages (image_id, sender_id, message, created_at) VALUES (:image_id, :sender_id, :message, NOW())";
+        $stmt = $this->db->prepare($query);
+        $ok = $stmt->execute([
+            ':image_id' => $image_id,
+            ':sender_id' => $user_id,
+            ':message' => $message
+        ]);
+
+        if ($ok) {
+            $comment_id = $this->db->lastInsertId();
+            echo json_encode([
+                'success' => true,
+                'comment' => [
+                    'id' => $comment_id,
+                    'message' => htmlspecialchars($message),
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'full_name' => $_SESSION['full_name'],
+                    'username' => $_SESSION['username'],
+                    'avatar' => !empty($_SESSION['avatar']) ? $_SESSION['avatar'] : ''
+                ]
+            ]);
+            exit();
+        }
+
+        echo json_encode(['success' => false, 'message' => 'Không thể lưu bình luận']);
         exit();
     }
 

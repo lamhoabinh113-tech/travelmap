@@ -134,6 +134,9 @@ CREATE TABLE IF NOT EXISTS `private_messages` (
     `sender_id`   INT NOT NULL,
     `receiver_id` INT NOT NULL,
     `message`     TEXT NOT NULL,
+    `attachment`  VARCHAR(255) DEFAULT NULL,
+    `reaction`    VARCHAR(50) DEFAULT NULL,
+    `reply_to_image_id` INT DEFAULT NULL,
     `created_at`  DATETIME DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_private_pair` (`sender_id`,`receiver_id`,`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

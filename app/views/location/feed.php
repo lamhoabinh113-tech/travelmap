@@ -401,13 +401,13 @@
                     if (in_array($ext, $video_exts)):
             ?>
                         <div class="feed-media-wrap">
-                            <video controls class="feed-image">
+                            <video controls class="feed-image" data-image-id="<?php echo $media['id']; ?>" data-friend-id="<?php echo $item['user_id']; ?>">
                                 <source src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" type="video/mp4">
                             </video>
                         </div>
                     <?php else: ?>
                         <div class="feed-media-wrap">
-                            <img src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" class="feed-image" alt="<?php echo htmlspecialchars($item['place_name']); ?>" onclick="window.location.href='index.php?url=location/friend_map&id=<?php echo $item['user_id']; ?>'">
+                            <img src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" class="feed-image" alt="<?php echo htmlspecialchars($item['place_name']); ?>" data-image-id="<?php echo $media['id']; ?>" data-friend-id="<?php echo $item['user_id']; ?>" onclick="window.location.href='index.php?url=location/friend_map&id=<?php echo $item['user_id']; ?>'">
                         </div>
                     <?php endif; ?>
                 <?php else: 
@@ -429,11 +429,11 @@
                                 <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
                                     <div class="feed-carousel-stage">
                                     <?php if ($isVideo): ?>
-                                        <video controls playsinline>
+                                        <video controls playsinline data-image-id="<?php echo $media['id']; ?>" data-friend-id="<?php echo $item['user_id']; ?>">
                                             <source src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" type="video/mp4">
                                         </video>
                                     <?php else: ?>
-                                        <img src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" alt="<?php echo htmlspecialchars($item['place_name']); ?>" draggable="false">
+                                        <img src="<?= UPLOADS_URL ?>/<?php echo $media['image_path']; ?>" alt="<?php echo htmlspecialchars($item['place_name']); ?>" draggable="false" data-image-id="<?php echo $media['id']; ?>" data-friend-id="<?php echo $item['user_id']; ?>">
                                     <?php endif; ?>
                                     </div>
                                 </div>
@@ -885,8 +885,11 @@
                     const heading = card.querySelector('h6, .fw-bold');
                     if (heading) caption = heading.innerText;
                 }
+
+                const imageId = el.getAttribute('data-image-id') || 0;
+                const friendId = el.getAttribute('data-friend-id') || 0;
                 
-                return { src, isVid, caption };
+                return { src, isVid, caption, imageId, friendId };
             });
             
             lightboxCurrentIndex = allMedia.indexOf(target);
@@ -909,10 +912,33 @@
                 <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
                 <span class="lightbox-arrow lightbox-arrow-left" onclick="prevLightboxImage()"><i class="bi bi-chevron-left"></i></span>
                 <span class="lightbox-arrow lightbox-arrow-right" onclick="nextLightboxImage()"><i class="bi bi-chevron-right"></i></span>
-                <div class="lightbox-content-wrapper">
-                    <img id="lightbox-img" src="" alt="" />
-                    <video id="lightbox-video" src="" controls style="display:none;"></video>
-                    <div class="lightbox-caption" id="lightbox-caption"></div>
+                
+                <div class="d-flex w-100 h-100 flex-column flex-md-row">
+                    <!-- Khu vực Media -->
+                    <div class="lightbox-content-wrapper flex-grow-1" style="position: relative; display: flex; align-items: center; justify-content: center; background: black;">
+                        <img id="lightbox-img" src="" alt="" style="max-width: 100%; max-height: 100vh; object-fit: contain;" />
+                        <video id="lightbox-video" src="" controls style="display:none; max-width: 100%; max-height: 100vh;"></video>
+                        <div class="lightbox-caption" id="lightbox-caption" style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white;"></div>
+                    </div>
+                    
+                    <!-- Sidebar Bình luận & Tương tác ảnh -->
+                    <div id="lightbox-sidebar" style="width: 350px; background: white; display: flex; flex-direction: column; border-left: 1px solid #e2e8f0; height: 100vh;">
+                        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold">Bình luận ảnh</h6>
+                            <button id="lightbox-send-chat-btn" class="btn btn-sm btn-outline-primary" style="font-size:12px;" onclick="lightboxSendToChat()"><i class="bi bi-send"></i> Gửi vào Chat</button>
+                        </div>
+                        <div id="lightbox-comments-list" class="flex-grow-1 overflow-auto p-3" style="background: #f8fafc; display:flex; flex-direction:column; gap:10px;">
+                            <div class="text-center text-muted small">Đang tải bình luận...</div>
+                        </div>
+                        <div class="p-3 border-top bg-white">
+                            <form onsubmit="postLightboxComment(event)" class="d-flex gap-2">
+                                <input type="hidden" id="lightbox-current-image-id">
+                                <input type="hidden" id="lightbox-current-friend-id">
+                                <input type="text" id="lightbox-comment-input" class="form-control form-control-sm rounded-pill" placeholder="Viết bình luận..." autocomplete="off">
+                                <button type="submit" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display:flex; align-items:center; justify-content:center;"><i class="bi bi-send"></i></button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(lightbox);
@@ -967,6 +993,86 @@
         }
         
         caption.innerText = media.caption || "";
+
+        // Update comment sidebar
+        document.getElementById('lightbox-current-image-id').value = media.imageId || 0;
+        document.getElementById('lightbox-current-friend-id').value = media.friendId || 0;
+        
+        if (media.imageId && media.imageId > 0) {
+            document.getElementById('lightbox-sidebar').style.display = 'flex';
+            const mine = Number(media.friendId) === Number(<?php echo $_SESSION['user_id'] ?? 0; ?>);
+            document.getElementById('lightbox-send-chat-btn').style.display = mine ? 'none' : 'inline-block';
+            loadLightboxComments(media.imageId);
+        } else {
+            document.getElementById('lightbox-sidebar').style.display = 'none';
+        }
+    }
+
+    function loadLightboxComments(imageId) {
+        const list = document.getElementById('lightbox-comments-list');
+        list.innerHTML = '<div class="text-center text-muted small">Đang tải bình luận...</div>';
+        
+        fetch(`index.php?url=feed/getImageComments&image_id=${imageId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(!data.success || data.comments.length === 0) {
+                    list.innerHTML = '<div class="text-center text-muted small mt-4">Chưa có bình luận nào.</div>';
+                    return;
+                }
+                list.innerHTML = data.comments.map(c => {
+                    const avatar = c.avatar ? `<img src="<?= UPLOADS_URL ?>/avatars/${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : c.username.substring(0,1).toUpperCase();
+                    return `
+                        <div class="d-flex gap-2">
+                            <div style="width: 28px; height: 28px; background: #94a3b8; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; overflow:hidden; flex-shrink:0;">
+                                ${avatar}
+                            </div>
+                            <div style="flex:1; background:#f1f5f9; border-radius:12px; padding:6px 10px; font-size:12px;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong style="color:#1e293b;">${escapeHtml(c.full_name)}</strong>
+                                </div>
+                                <div style="color: #334155;">${escapeHtml(c.message)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                list.scrollTop = list.scrollHeight;
+            });
+    }
+
+    function postLightboxComment(e) {
+        e.preventDefault();
+        const imageId = document.getElementById('lightbox-current-image-id').value;
+        const input = document.getElementById('lightbox-comment-input');
+        const text = input.value.trim();
+        
+        if (!imageId || !text) return;
+        
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        formData.append('message', text);
+        
+        fetch('index.php?url=feed/postImageComment', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    input.value = '';
+                    loadLightboxComments(imageId);
+                } else {
+                    alert(data.message || 'Lỗi gửi bình luận');
+                }
+            });
+    }
+
+    function lightboxSendToChat() {
+        const imageId = document.getElementById('lightbox-current-image-id').value;
+        const friendId = document.getElementById('lightbox-current-friend-id').value;
+        if(imageId && friendId) {
+            if(typeof sendImageToChat === 'function') {
+                sendImageToChat(friendId, imageId);
+            } else {
+                alert("Bạn cần mở Widget Chat trước.");
+            }
+        }
     }
 
     function closeLightbox() {
@@ -1003,5 +1109,6 @@
     // Initialize lightbox on load
     document.addEventListener('DOMContentLoaded', initLightbox);
 </script>
+<?php include 'chat_widget.php'; ?>
 </body>
 </html>
