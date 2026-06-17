@@ -62,7 +62,8 @@ class LocationModel {
             $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
                              (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
                              (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
-                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type,
+                             (SELECT id FROM location_images WHERE location_id = l.id AND image_path = l.image LIMIT 1) as cover_image_id
                       FROM " . $this->table_name . " l
                       JOIN users u ON l.user_id = u.id
                       WHERE l.user_id = :user_id 
@@ -78,7 +79,8 @@ class LocationModel {
             $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
                              (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
                              (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
-                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                             (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type,
+                             (SELECT id FROM location_images WHERE location_id = l.id AND image_path = l.image LIMIT 1) as cover_image_id
                       FROM " . $this->table_name . " l
                       JOIN users u ON l.user_id = u.id
                       WHERE l.user_id = :user_id
@@ -120,7 +122,8 @@ class LocationModel {
         $query = "SELECT l.*, u.full_name, u.username, u.avatar as user_avatar,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
-                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type,
+                         (SELECT id FROM location_images WHERE location_id = l.id AND image_path = l.image LIMIT 1) as cover_image_id
                   FROM " . $this->table_name . " l
                   JOIN users u ON l.user_id = u.id
                   WHERE l.trip_id = :trip_id
@@ -164,7 +167,8 @@ class LocationModel {
         $query = "SELECT l.*, u.avatar as user_avatar, u.username, u.full_name,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid1) as is_liked,
-                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type
+                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid2 LIMIT 1) as reaction_type,
+                         (SELECT id FROM location_images WHERE location_id = l.id AND image_path = l.image LIMIT 1) as cover_image_id
                   FROM " . $this->table_name . " l
                   JOIN users u ON l.user_id = u.id
                   WHERE l.user_id = :uid3 
@@ -334,7 +338,8 @@ class LocationModel {
         $query = "SELECT l.*, u.full_name, u.username, u.avatar as user_avatar,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id) as like_count,
                          (SELECT COUNT(*) FROM likes WHERE location_id = l.id AND user_id = :uid) as is_liked,
-                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid LIMIT 1) as reaction_type
+                         (SELECT k.reaction_type FROM likes k WHERE k.location_id = l.id AND k.user_id = :uid LIMIT 1) as reaction_type,
+                         (SELECT id FROM location_images WHERE location_id = l.id AND image_path = l.image LIMIT 1) as cover_image_id
                   FROM locations l
                   JOIN users u ON l.user_id = u.id
                   JOIN friendships f ON (u.id = f.friend_id OR u.id = f.user_id)

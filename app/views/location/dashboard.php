@@ -386,7 +386,7 @@
     // Helper function: render ảnh/video nhất quán toàn app
     // $context: 'card' (timeline/friends) | 'album' (album grid)
     // =========================================================
-    function renderMedia(string $filename, int $height = 160, string $context = 'card'): string {
+    function renderMedia(string $filename, int $height = 160, string $context = 'card', int $imageId = 0, int $friendId = 0): string {
         if (empty($filename)) {
             // Placeholder không ảnh — dùng class gốc của CSS
             return '<div class="memory-img-placeholder"><i class="bi bi-camera"></i></div>';
@@ -395,25 +395,27 @@
         $ext   = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         $isVid = in_array($ext, ['mp4', 'webm', 'ogg', 'mov']);
         $mime  = $ext === 'mov' ? 'mp4' : $ext;
+        $dataAttrs = $imageId > 0 ? ' data-image-id="' . $imageId . '" data-friend-id="' . $friendId . '"' : '';
 
         if ($context === 'album') {
             // Album grid: img/video tự fill theo CSS .album-cell img
             if ($isVid) {
-                return '<video muted preload="none"><source src="' . $url . '" type="video/' . $mime . '"></video>'
+                return '<video muted preload="none"' . $dataAttrs . '><source src="' . $url . '" type="video/' . $mime . '"></video>'
                      . '<div class="play-icon"><i class="bi bi-play-circle-fill"></i></div>';
             }
-            return '<img src="' . $url . '" alt="" loading="lazy">';
+            return '<img src="' . $url . '" alt="" loading="lazy"' . $dataAttrs . '>';
         }
 
         // Timeline / friend card: dùng class .memory-img gốc (aspect-ratio 4/3 từ CSS)
         if ($isVid) {
-            return '<video class="memory-img" muted preload="none">'
+            return '<video class="memory-img" muted preload="none"' . $dataAttrs . '>'
                  . '<source src="' . $url . '" type="video/' . $mime . '">'
                  . '</video>'
                  . '<div class="album-badge" style="bottom:50%;right:50%;transform:translate(50%,50%);font-size:24px;background:rgba(0,0,0,.35);color:#fff;padding:12px;border-radius:50%;">'
                  . '<i class="bi bi-play-circle-fill"></i></div>';
         }
         return '<img src="' . $url . '" class="memory-img" alt="" loading="lazy"'
+             . $dataAttrs
              . ' onerror="this.style.display=\'none\'">';
     }
 
@@ -550,7 +552,7 @@
                                 <small class="text-muted ms-auto" style="font-size:10px;"><?php echo date('d/m/Y', strtotime($floc['created_at'])); ?></small>
                             </div>
                             <div class="memory-img-wrapper">
-                                <?= renderMedia($floc['image'], 130) ?>
+                                <?= renderMedia($floc['image'], 130, 'card', (int)($floc['cover_image_id'] ?? 0), (int)($floc['user_id'] ?? 0)) ?>
                             </div>
                             <h6 class="fw-bold mb-1 small mt-2"><?php echo htmlspecialchars($floc['place_name']); ?></h6>
                             <p class="small text-muted mb-0 text-truncate" style="font-size:11px;"><?php echo htmlspecialchars($floc['description']); ?></p>
@@ -756,7 +758,7 @@
                         <?php $loc = $item['loc']; ?>
                         <div class="memory-item" data-trip-id="<?php echo $loc['trip_id'] ?? 0; ?>" <?php if (!empty($loc['latitude']) && !empty($loc['longitude'])): ?>onclick="focusMap(<?php echo $loc['latitude']; ?>, <?php echo $loc['longitude']; ?>, true)"<?php endif; ?>>
                             <div class="memory-img-wrapper" onclick="event.stopPropagation(); openAlbum(<?php echo $loc['id']; ?>, <?php echo htmlspecialchars(json_encode($loc['place_name'] ?? 'Album'), ENT_QUOTES, 'UTF-8'); ?>)">
-                                <?= renderMedia($loc['image'], 160) ?>
+                                <?= renderMedia($loc['image'], 160, 'card', (int)($loc['cover_image_id'] ?? 0), (int)($loc['user_id'] ?? 0)) ?>
                                 <?php if($loc['image']): ?>
                                     <?php $ext = strtolower(pathinfo($loc['image'], PATHINFO_EXTENSION)); ?>
                                     <div class="album-badge">
@@ -1409,8 +1411,8 @@
 
 <!-- Modal Album (Lightbox) -->
 <div class="modal fade album-lightbox" id="albumModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 bg-dark">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 bg-dark" style="min-height: 80vh;">
             <div class="modal-header border-0 pb-0 p-4 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <h5 class="modal-title fw-bold text-white" id="albumTitle">Album Ảnh</h5>
@@ -1425,20 +1427,39 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 text-center">
-                <div class="album-stage">
-                <div id="albumCarousel" class="carousel slide carousel-fade" data-bs-ride="false">
-                    <div class="carousel-inner rounded-4" id="albumItems">
-                        <!-- Images will be injected here -->
+            <div class="modal-body p-0 d-flex" style="min-height: 70vh;">
+                <!-- Phần carousel (ảnh/video) -->
+                <div class="flex-grow-1 p-4 d-flex flex-column">
+                    <div class="album-stage">
+                    <div id="albumCarousel" class="carousel slide carousel-fade" data-bs-ride="false">
+                        <div class="carousel-inner rounded-4" id="albumItems">
+                            <!-- Images will be injected here -->
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#albumCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#albumCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon"></span>
+                        </button>
                     </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#albumCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon"></span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#albumCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon"></span>
-                    </button>
+                    <div class="album-thumbs text-start" id="albumThumbs"></div>
+                    </div>
                 </div>
-                <div class="album-thumbs text-start" id="albumThumbs"></div>
+                <!-- Sidebar Bình luận Ảnh trong Album -->
+                <div id="album-comment-sidebar" style="width: 320px; background: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; border-bottom-right-radius: 1rem;">
+                    <div class="p-3 border-bottom">
+                        <h6 class="m-0 fw-bold" style="color:#1e293b;">Bình luận ảnh</h6>
+                    </div>
+                    <div id="album-comments-list" class="flex-grow-1 overflow-auto p-3" style="background: #f8fafc; display:flex; flex-direction:column; gap:10px; min-height:200px;">
+                        <div class="text-center text-muted small mt-4">Chọn ảnh để xem bình luận</div>
+                    </div>
+                    <div class="p-3 border-top bg-white" style="border-bottom-right-radius: 1rem;">
+                        <form onsubmit="postAlbumComment(event)" class="d-flex gap-2">
+                            <input type="hidden" id="album-current-image-id">
+                            <input type="text" id="album-comment-input" class="form-control form-control-sm rounded-pill" placeholder="Viết bình luận..." autocomplete="off">
+                            <button type="submit" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display:flex; align-items:center; justify-content:center;"><i class="bi bi-send"></i></button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2529,6 +2550,9 @@
         const thumbsContainer = document.getElementById('albumThumbs');
         itemsContainer.innerHTML = '<div class="text-white py-5"><div class="spinner-border text-primary"></div></div>';
         thumbsContainer.innerHTML = '';
+        document.getElementById('album-comments-list').innerHTML = '<div class="text-center text-muted small mt-4">Đang tải bình luận...</div>';
+        document.getElementById('album-current-image-id').value = '';
+        
         // Cập nhật link quản lý và nút xóa ảnh (chỉ hiện nếu là của mình)
         const manageLink = document.getElementById('manageAlbumLink');
         const deletePhotoBtn = document.getElementById('albumDeletePhotoBtn');
@@ -2580,10 +2604,80 @@
 
                         return `<button class="album-thumb ${index === 0 ? 'active' : ''}" type="button" data-bs-target="#albumCarousel" data-bs-slide-to="${index}" onclick="setActiveAlbumThumb(${index})">${media}</button>`;
                     }).join('');
+
+                    // Load bình luận cho ảnh đầu tiên
+                    if (data[0] && data[0].id) {
+                        document.getElementById('album-current-image-id').value = data[0].id;
+                        loadAlbumComments(data[0].id);
+                    }
+
+                    // Khi chuyển slide -> update bình luận
+                    const carousel = document.getElementById('albumCarousel');
+                    carousel.addEventListener('slid.bs.carousel', function(e) {
+                        const activeItem = carousel.querySelector('.carousel-item.active');
+                        if (activeItem) {
+                            const imgId = activeItem.getAttribute('data-image-id');
+                            if (imgId) {
+                                document.getElementById('album-current-image-id').value = imgId;
+                                loadAlbumComments(imgId);
+                            }
+                        }
+                    });
                 } else {
                     itemsContainer.innerHTML = '<div class="text-white py-5">Chưa có ảnh hoặc video trong album này.</div>';
                     thumbsContainer.innerHTML = '';
                     if (deletePhotoBtn) deletePhotoBtn.style.display = 'none';
+                    document.getElementById('album-comments-list').innerHTML = '<div class="text-center text-muted small mt-4">Chưa có ảnh.</div>';
+                }
+            });
+    }
+
+    function loadAlbumComments(imageId) {
+        const list = document.getElementById('album-comments-list');
+        list.innerHTML = '<div class="text-center text-muted small">Đang tải bình luận...</div>';
+        fetch(`index.php?url=feed/getImageComments&image_id=${imageId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(!data.success || data.comments.length === 0) {
+                    list.innerHTML = '<div class="text-center text-muted small mt-4">Chưa có bình luận nào.</div>';
+                    return;
+                }
+                list.innerHTML = data.comments.map(c => {
+                    const avatar = c.avatar
+                        ? `<img src="<?= UPLOADS_URL ?>/avatars/${c.avatar}" style="width:100%;height:100%;object-fit:cover;">`
+                        : c.username.substring(0,1).toUpperCase();
+                    return `
+                        <div class="d-flex gap-2">
+                            <div style="width:28px;height:28px;background:#94a3b8;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;overflow:hidden;flex-shrink:0;">
+                                ${avatar}
+                            </div>
+                            <div style="flex:1;background:#f1f5f9;border-radius:12px;padding:6px 10px;font-size:12px;">
+                                <strong style="color:#1e293b;display:block;margin-bottom:2px;">${escapeHtml(c.full_name)}</strong>
+                                <div style="color:#334155;">${escapeHtml(c.message)}</div>
+                            </div>
+                        </div>`;
+                }).join('');
+                list.scrollTop = list.scrollHeight;
+            });
+    }
+
+    function postAlbumComment(e) {
+        e.preventDefault();
+        const imageId = document.getElementById('album-current-image-id').value;
+        const input = document.getElementById('album-comment-input');
+        const text = input.value.trim();
+        if (!imageId || !text) return;
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        formData.append('message', text);
+        fetch('index.php?url=feed/postImageComment', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    input.value = '';
+                    loadAlbumComments(imageId);
+                } else {
+                    alert(data.message || 'Lỗi gửi bình luận');
                 }
             });
     }
@@ -3585,6 +3679,15 @@
                 const targetSrc = target.tagName.toLowerCase() === 'video' ? ((sourceEl ? sourceEl.src : null) || target.src) : target.src;
                 lightboxCurrentIndex = lightboxMediaList.findIndex(m => m.src === targetSrc);
             }
+
+            const imageId = target.getAttribute('data-image-id') || 0;
+            const friendId = target.getAttribute('data-friend-id') || 0;
+            
+            if (lightboxCurrentIndex !== -1) {
+                lightboxMediaList[lightboxCurrentIndex].imageId = imageId;
+                lightboxMediaList[lightboxCurrentIndex].friendId = friendId;
+            }
+
             
             showLightbox();
         });
@@ -3600,10 +3703,31 @@
                 <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
                 <span class="lightbox-arrow lightbox-arrow-left" onclick="prevLightboxImage()"><i class="bi bi-chevron-left"></i></span>
                 <span class="lightbox-arrow lightbox-arrow-right" onclick="nextLightboxImage()"><i class="bi bi-chevron-right"></i></span>
-                <div class="lightbox-content-wrapper">
-                    <img id="lightbox-img" src="" alt="" />
-                    <video id="lightbox-video" src="" controls style="display:none;"></video>
-                    <div class="lightbox-caption" id="lightbox-caption"></div>
+                
+                <div class="d-flex w-100 h-100 flex-column flex-md-row">
+                    <div class="lightbox-content-wrapper flex-grow-1" style="position: relative; display: flex; align-items: center; justify-content: center; background: black;">
+                        <img id="lightbox-img" src="" alt="" style="max-width: 100%; max-height: 100vh; object-fit: contain;" />
+                        <video id="lightbox-video" src="" controls style="display:none; max-width: 100%; max-height: 100vh;"></video>
+                        <div class="lightbox-caption" id="lightbox-caption" style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white;"></div>
+                    </div>
+                    
+                    <div id="lightbox-sidebar" style="width: 350px; background: white; display: flex; flex-direction: column; border-left: 1px solid #e2e8f0; height: 100vh;">
+                        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold">Bình luận ảnh</h6>
+                            <button id="lightbox-send-chat-btn" class="btn btn-sm btn-outline-primary" style="font-size:12px;" onclick="lightboxSendToChat()"><i class="bi bi-send"></i> Gửi vào Chat</button>
+                        </div>
+                        <div id="lightbox-comments-list" class="flex-grow-1 overflow-auto p-3" style="background: #f8fafc; display:flex; flex-direction:column; gap:10px;">
+                            <div class="text-center text-muted small">Đang tải bình luận...</div>
+                        </div>
+                        <div class="p-3 border-top bg-white">
+                            <form onsubmit="postLightboxComment(event)" class="d-flex gap-2">
+                                <input type="hidden" id="lightbox-current-image-id">
+                                <input type="hidden" id="lightbox-current-friend-id">
+                                <input type="text" id="lightbox-comment-input" class="form-control form-control-sm rounded-pill" placeholder="Viết bình luận..." autocomplete="off">
+                                <button type="submit" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display:flex; align-items:center; justify-content:center;"><i class="bi bi-send"></i></button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(lightbox);
@@ -3658,6 +3782,85 @@
         }
         
         caption.innerText = media.caption || "";
+
+        document.getElementById('lightbox-current-image-id').value = media.imageId || 0;
+        document.getElementById('lightbox-current-friend-id').value = media.friendId || 0;
+        
+        if (media.imageId && media.imageId > 0) {
+            document.getElementById('lightbox-sidebar').style.display = 'flex';
+            const mine = Number(media.friendId) === Number(<?php echo $_SESSION['user_id'] ?? 0; ?>);
+            document.getElementById('lightbox-send-chat-btn').style.display = mine ? 'none' : 'inline-block';
+            loadLightboxComments(media.imageId);
+        } else {
+            document.getElementById('lightbox-sidebar').style.display = 'none';
+        }
+    }
+
+    function loadLightboxComments(imageId) {
+        const list = document.getElementById('lightbox-comments-list');
+        list.innerHTML = '<div class="text-center text-muted small">Đang tải bình luận...</div>';
+        
+        fetch(`index.php?url=feed/getImageComments&image_id=${imageId}`)
+            .then(res => res.json())
+            .then(data => {
+                if(!data.success || data.comments.length === 0) {
+                    list.innerHTML = '<div class="text-center text-muted small mt-4">Chưa có bình luận nào.</div>';
+                    return;
+                }
+                list.innerHTML = data.comments.map(c => {
+                    const avatar = c.avatar ? `<img src="<?= UPLOADS_URL ?>/avatars/${c.avatar}" style="width:100%;height:100%;object-fit:cover;">` : c.username.substring(0,1).toUpperCase();
+                    return `
+                        <div class="d-flex gap-2">
+                            <div style="width: 28px; height: 28px; background: #94a3b8; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; overflow:hidden; flex-shrink:0;">
+                                ${avatar}
+                            </div>
+                            <div style="flex:1; background:#f1f5f9; border-radius:12px; padding:6px 10px; font-size:12px;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong style="color:#1e293b;">${escapeHtml(c.full_name)}</strong>
+                                </div>
+                                <div style="color: #334155;">${escapeHtml(c.message)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                list.scrollTop = list.scrollHeight;
+            });
+    }
+
+    function postLightboxComment(e) {
+        e.preventDefault();
+        const imageId = document.getElementById('lightbox-current-image-id').value;
+        const input = document.getElementById('lightbox-comment-input');
+        const text = input.value.trim();
+        
+        if (!imageId || !text) return;
+        
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        formData.append('message', text);
+        
+        fetch('index.php?url=feed/postImageComment', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    input.value = '';
+                    loadLightboxComments(imageId);
+                } else {
+                    alert(data.message || 'Lỗi gửi bình luận');
+                }
+            });
+    }
+
+    function lightboxSendToChat() {
+        const imageId = document.getElementById('lightbox-current-image-id').value;
+        const friendId = document.getElementById('lightbox-current-friend-id').value;
+        if(imageId && friendId) {
+            if(typeof sendImageToChat === 'function') {
+                sendImageToChat(friendId, imageId);
+            } else {
+                alert("Bạn cần mở Widget Chat trước.");
+            }
+        }
     }
 
     function closeLightbox() {
